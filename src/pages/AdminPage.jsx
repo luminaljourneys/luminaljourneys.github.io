@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import MockupBanner from "../components/MockupBanner.jsx";
 import { navigate } from "../App.jsx";
 
@@ -319,7 +319,7 @@ function Dashboard() {
                   const sc = STATUS_META[row.status];
                   const isExp = expanded === row.id;
                   return (
-                    <tbody key={row.id}>
+                    <React.Fragment key={row.id}>
                       <tr
                         style={{ background: isExp ? "rgba(17,76,92,0.03)" : "transparent" }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(17,76,92,0.03)"}
@@ -403,7 +403,7 @@ function Dashboard() {
                           </td>
                         </tr>
                       )}
-                    </tbody>
+                    </React.Fragment>
                   );
                 })}
               </tbody>

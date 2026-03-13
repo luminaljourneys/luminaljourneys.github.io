@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      var path = window.location.pathname || "/";
-      sessionStorage.setItem("lj_redirect", path);
-      window.location.replace("/");
+      var l = window.location;
+      var path = l.pathname + l.search;
+      l.replace(l.protocol + "//" + l.hostname + "/?r=" + encodeURIComponent(path));
     </script>
   </head>
   <body></body>

@@ -96,7 +96,8 @@ export default function LandingPage() {
             padding: "1rem 2.6rem", borderRadius: "3rem",
             textDecoration: "none", fontSize: "1rem", border: "none",
             fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.04em",
-            boxShadow: "0 8px 32px rgba(224,122,95,0.35)",
+            boxShadow: "none",
+            border: "none", cursor: "pointer",
             transition: "all 0.25s"
           }}
             onMouseEnter={e => { e.target.style.background = "var(--color-primary-dark)"; e.target.style.transform = "translateY(-2px)"; }}
@@ -105,7 +106,7 @@ export default function LandingPage() {
             Start Your Intake →
           </button>
           <a href="#about" style={{
-            border: "1.5px solid rgba(155,94,82,0.35)", color: "var(--color-primary)",
+            border: "none", cursor: "pointer", color: "var(--color-primary)",
             padding: "1rem 2.2rem", borderRadius: "3rem",
             textDecoration: "none", fontSize: "1rem",
             fontFamily: "'DM Sans', sans-serif",
@@ -203,7 +204,7 @@ export default function LandingPage() {
         </p>
         <button onClick={() => navigate("/intake")} style={{
           background: "var(--color-bg)", color: "var(--color-primary)",
-          padding: "1rem 2.8rem", borderRadius: "3rem",
+          padding: "1rem 2.8rem", borderRadius: "3rem", border: "none", cursor: "pointer",
           textDecoration: "none", fontSize: "1rem",
           fontFamily: "'DM Sans', sans-serif", fontWeight: 600,
           letterSpacing: "0.04em", transition: "all 0.25s",
