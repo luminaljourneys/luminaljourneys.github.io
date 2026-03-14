@@ -262,15 +262,16 @@ function LayoutCommand() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1px", background: "rgba(10,22,40,0.06)" }}>
           {services.map((s, i) => (
             <div key={i} style={{
-              background: "#0A1628", padding: "2.5rem 2rem",
-              borderTop: "2px solid transparent", transition: "border 0.2s"
+              background: "#fff", padding: "2.5rem 2rem",
+              borderTop: "2px solid transparent", transition: "border 0.2s",
+              boxShadow: "0 2px 16px rgba(10,22,40,0.06)"
             }}
-              onMouseEnter={e => e.currentTarget.style.borderTopColor = "var(--color-accent)"}
+              onMouseEnter={e => e.currentTarget.style.borderTopColor = "#0A1628"}
               onMouseLeave={e => e.currentTarget.style.borderTopColor = "transparent"}
             >
-              <div style={{ fontSize: "0.65rem", color: "rgba(10,22,40,0.25)", letterSpacing: "0.15em", marginBottom: "1.2rem" }}>0{i + 1}</div>
+              <div style={{ fontSize: "0.65rem", color: "rgba(10,22,40,0.35)", letterSpacing: "0.15em", marginBottom: "1.2rem" }}>0{i + 1}</div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem", letterSpacing: "-0.01em", color: "#0A1628" }}>{s.title}</h3>
-              <p style={{ fontSize: "0.85rem", color: "rgba(10,22,40,0.55)", lineHeight: 1.7 }}>{s.desc}</p>
+              <p style={{ fontSize: "0.85rem", color: "rgba(10,22,40,0.6)", lineHeight: 1.7 }}>{s.desc}</p>
             </div>
           ))}
         </div>
