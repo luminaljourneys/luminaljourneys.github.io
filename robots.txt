@@ -1,0 +1,5 @@
+# Luminal Journeys — Coming Soon
+# Block all web crawlers until public launch
+
+User-agent: *
+Disallow: /

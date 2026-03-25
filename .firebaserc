@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "luminaljourneys"
+  },
+  "targets": {
+    "luminaljourneys": {
+      "hosting": {
+        "production": [
+          "luminaljourneys"
+        ],
+        "staging": [
+          "luminaljourneys-staging"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
