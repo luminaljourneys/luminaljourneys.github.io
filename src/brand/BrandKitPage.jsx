@@ -3,16 +3,18 @@ import { navigate } from "../App.jsx";
 
 // ── Exact brand tokens from Lovable CSS ──────────────────────────────────────
 const T = {
-  paper:      "#f9f7f4",
+  paper:      "#F9F8F6",   // page background
+  card:       "#F4F3F1",   // card / surface background
   deep:       "#172f2d",
   teal:       "#224e4a",
   sage:       "#89a99e",
   sand:       "#e6ddd0",
   amber:      "#bf8a3e",
-  pink:       "#c4856e",   // on-dark logo color
+  // on-dark: use paper, NOT filter:invert (Lovable's pink was an invert/brightness artifact)
+  onDark:     "#F9F8F6",
   muted:      "#89a99e",
-  border:     "rgba(23,47,45,0.12)",
-  borderLight:"rgba(23,47,45,0.08)",
+  border:     "#e5e7eb",
+  borderLight:"#f0f1f2",
   avoid:      "#e05c5c",
   radius:     "12px",
 };
@@ -43,7 +45,7 @@ function SectionTitle({ children }) {
 function Card({ children, style = {} }) {
   return (
     <div style={{
-      background: T.paper, border: `1px solid ${T.border}`,
+      background: T.card, border: `1px solid ${T.border}`,
       borderRadius: T.radius, padding: "1.5rem",
       ...style
     }}>
@@ -202,12 +204,12 @@ function BrandKitContent() {
             </Card>
             {/* Logo Mark — dark */}
             <Card style={{ background: T.teal, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: "1.5rem" }}>
-              <LogoMark color={T.pink} size={44} />
+              <LogoMark color={T.onDark} size={44} />
               <p style={{ ...mono, fontSize: "0.65rem", letterSpacing: "0.18em", color: "rgba(249,247,244,0.45)" }}>ON DARK</p>
             </Card>
             {/* Wordmark — dark */}
             <Card style={{ background: T.teal, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, gap: "1.5rem" }}>
-              <p style={{ ...mono, fontSize: "1.1rem", letterSpacing: "0.2em", color: T.pink, fontWeight: 500 }}>LUMINAL JOURNEYS</p>
+              <p style={{ ...mono, fontSize: "1.1rem", letterSpacing: "0.2em", color: T.onDark, fontWeight: 500 }}>LUMINAL JOURNEYS</p>
               <p style={{ ...mono, fontSize: "0.65rem", letterSpacing: "0.18em", color: "rgba(249,247,244,0.45)" }}>ON DARK</p>
             </Card>
           </div>
@@ -275,7 +277,7 @@ function BrandKitContent() {
               { name: "Sage",       hex: "#89a99e", usage: "Supporting elements" },
               { name: "Sand",       hex: "#e6ddd0", usage: "Backgrounds, cards" },
               { name: "Warm Amber", hex: "#bf8a3e", usage: "Accent, highlights" },
-              { name: "Paper",      hex: "#f9f7f4", usage: "Page background" },
+              { name: "Paper",      hex: "#F9F8F6", usage: "Page background" },
             ].map(c => (
               <div key={c.hex} style={{ border: `1px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
                 <div style={{ background: c.hex, height: 90 }} />

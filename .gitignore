@@ -68,3 +68,13 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 .env.local
+
+# Playwright output
+playwright-report/
+test-results/
+
+# macOS
+.DS_Store
+
+# Office temp files
+presentations/~$*

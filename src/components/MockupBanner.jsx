@@ -41,7 +41,7 @@ export default function MockupBanner() {
           onClick={() => setOpen(false)}
         >
           <div style={{
-            background: "#f9f7f4", borderRadius: "1.2rem",
+            background: "#F9F8F6", borderRadius: "1.2rem",
             padding: "2.5rem", maxWidth: 420, width: "100%", margin: "1rem",
             border: "1px solid var(--color-border)",
             boxShadow: "0 24px 80px rgba(23,47,45,0.18)"
@@ -63,7 +63,7 @@ export default function MockupBanner() {
               }}>×</button>
             </div>
 
-            <div style={{ height: 1, background: "rgba(23,47,45,0.12)", marginBottom: "1.2rem" }} />
+            <div style={{ height: 1, background: "#e5e7eb", marginBottom: "1.2rem" }} />
 
             <p style={{ fontSize: "0.9rem", lineHeight: 1.7, color: "#3a5450", marginBottom: "1rem" }}>
               This is a <strong style={{ color: "#172f2d" }}>design prototype</strong> for the Luminal Journeys platform. All data shown is simulated.

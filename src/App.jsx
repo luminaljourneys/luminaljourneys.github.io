@@ -10,6 +10,9 @@ import LandingPage from "./pages/LandingPage";
 import IntakePage from "./pages/IntakePage";
 import AdminPage from "./pages/AdminPage";
 import BrandKitPage from "./brand/BrandKitPage";
+import DynamicPage from "./pages/DynamicPage.jsx";
+import StagingBanner from "./components/StagingBanner.jsx";
+import EditModeToggle from "./components/EditModeToggle.jsx";
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export function navigate(to) {
@@ -44,8 +47,34 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", "A");
   }, []);
 
-  if (route === "/intake") return <IntakePage />;
+  if (route === "/intake") return (
+    <>
+      <StagingBanner />
+      <IntakePage />
+      <EditModeToggle />
+    </>
+  );
+
   if (route === "/admin")  return <AdminPage />;
   if (route === "/brand")  return <BrandKitPage />;
-  return <LandingPage />;
+
+  // Dynamic pages — any /slug that doesn't match a code route
+  if (route !== "/" && route.startsWith("/") && !route.includes(".")) {
+    const pageId = route.slice(1); // strip leading "/"
+    return (
+      <>
+        <StagingBanner />
+        <DynamicPage pageId={pageId} />
+        <EditModeToggle />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StagingBanner />
+      <LandingPage />
+      <EditModeToggle />
+    </>
+  );
 }
