@@ -113,13 +113,26 @@ export function useFormConfig() {
   }
 
   // ── Field CRUD ────────────────────────────────────────────────────────────
-  const addField = async (partial) => {
-    const stepFields = fields.filter(f => f.step === partial.step)
-    const maxOrder   = stepFields.length ? Math.max(...stepFields.map(f => f.order)) : 0
-    const field = { id: `f-${Date.now()}`, halfWidth: false, deletable: true, options: [], order: maxOrder + 1, ...partial }
-    const updated = [...fields, field]
-    await saveConfig(updated, null)
-    return field
+  // addField: pass afterOrder (number) to insert after a specific position;
+  // omit / pass null to append at end. All orders are renumbered sequentially on save.
+  const addField = async (partial, afterOrder = null) => {
+    const stepFields = fields.filter(f => f.step === partial.step).sort((a, b) => a.order - b.order)
+
+    let rawOrder
+    if (afterOrder !== null) {
+      // Place fractionally after afterOrder so the sort puts it in the right slot
+      rawOrder = afterOrder + 0.5
+    } else {
+      rawOrder = stepFields.length ? Math.max(...stepFields.map(f => f.order)) + 1 : 1
+    }
+
+    const newField = { id: `f-${Date.now()}`, halfWidth: false, deletable: true, options: [], order: rawOrder, ...partial }
+
+    // Merge, sort, renumber — eliminates floating-point orders
+    const allStep = [...stepFields, newField].sort((a, b) => a.order - b.order).map((f, i) => ({ ...f, order: i + 1 }))
+    const otherFields = fields.filter(f => f.step !== partial.step)
+    await saveConfig([...otherFields, ...allStep], null)
+    return newField
   }
 
   const deleteField = async (fieldId) => saveConfig(fields.filter(f => f.id !== fieldId), null)

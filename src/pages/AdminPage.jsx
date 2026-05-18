@@ -537,40 +537,48 @@ function FormBuilderTab() {
         <>
           {/* ── Step tabs ──────────────────────────────────────────────────────── */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-            {steps.map((s, i) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0" }}>
+            {steps.map((s, i) => {
+              const isActive  = activeStep === i;
+              const isEditing = editingStep?.idx === i;
+              return (
                 <button
+                  key={s.id}
                   onClick={() => { setActiveStep(i); setEditingStep(null); }}
                   style={{
-                    padding: "0.45rem 1rem", borderRadius: editingStep?.idx === i ? "2rem 0 0 2rem" : "2rem",
+                    display: "flex", alignItems: "center", gap: 0,
+                    padding: 0, borderRadius: "2rem",
                     border: "1.5px solid",
-                    borderColor: activeStep === i ? "#172f2d" : "var(--color-border)",
-                    borderRight: editingStep?.idx === i ? "none" : undefined,
-                    background: activeStep === i ? "#172f2d" : "transparent",
-                    color: activeStep === i ? "#fff" : "#3a5450",
-                    fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", cursor: "pointer",
+                    borderColor: isActive ? "#172f2d" : "var(--color-border)",
+                    background: isActive ? "#172f2d" : "transparent",
+                    color: isActive ? "#fff" : "#3a5450",
+                    fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem",
+                    cursor: "pointer", overflow: "hidden",
                   }}
-                >{s.title}</button>
-                {/* Edit step pencil */}
-                <button
-                  title="Edit step name & description"
-                  onClick={() => {
-                    setActiveStep(i);
-                    setEditingStep(editingStep?.idx === i ? null : { idx: i, title: s.title, description: s.description || "" });
-                  }}
-                  style={{
-                    padding: "0.45rem 0.6rem",
-                    borderRadius: "0 2rem 2rem 0",
-                    border: "1.5px solid",
-                    borderColor: activeStep === i ? "#172f2d" : "var(--color-border)",
-                    borderLeft: "1px solid rgba(255,255,255,0.2)",
-                    background: editingStep?.idx === i ? "#bf8a3e" : (activeStep === i ? "#224e4a" : "transparent"),
-                    color: activeStep === i ? "#fff" : "#89a99e",
-                    cursor: "pointer", fontSize: "0.75rem", lineHeight: 1,
-                  }}
-                >✎</button>
-              </div>
-            ))}
+                >
+                  {/* Step title */}
+                  <span style={{ padding: "0.45rem 0.85rem 0.45rem 1rem" }}>{s.title}</span>
+                  {/* Divider */}
+                  <span style={{ width: 1, alignSelf: "stretch", flexShrink: 0, background: isActive ? "rgba(255,255,255,0.22)" : "rgba(23,47,45,0.15)" }} />
+                  {/* Pencil — stopPropagation so outer button doesn't clear editingStep */}
+                  <span
+                    title="Edit step name & description"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveStep(i);
+                      setEditingStep(isEditing ? null : { idx: i, title: s.title, description: s.description || "" });
+                    }}
+                    style={{
+                      padding: "0.45rem 0.75rem",
+                      fontSize: "0.78rem", lineHeight: 1,
+                      color: isEditing ? "#bf8a3e" : (isActive ? "rgba(255,255,255,0.72)" : "#89a99e"),
+                      background: isEditing ? "rgba(191,138,62,0.18)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "background 0.12s, color 0.12s",
+                    }}
+                  >✎</span>
+                </button>
+              );
+            })}
             {/* Add step */}
             <div style={{ display: "flex", gap: "0.4rem", marginLeft: "auto" }}>
               <input value={newStepTitle} onChange={e => setNewStepTitle(e.target.value)} placeholder="New page/step name…"
