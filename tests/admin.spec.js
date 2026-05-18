@@ -38,7 +38,10 @@ test.describe('Admin — unauthenticated', () => {
     await mockFirebase(page);
     await page.goto('/admin');
     await waitForApp(page);
-    await expect(page.locator('body')).toBeVisible();
+    // LoginModal is a fixed full-screen overlay — check its content, not body
+    await expect(
+      page.getByRole('button', { name: 'Sign In' }).or(page.getByTestId('tab-intakes'))
+    ).toBeVisible();
   });
 
   test('/admin shows password gate or tab bar', async ({ page }) => {

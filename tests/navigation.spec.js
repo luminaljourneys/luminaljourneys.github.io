@@ -80,7 +80,10 @@ test.describe('Navigation & Routing', () => {
     await mockFirebase(page);
     await page.goto('/admin');
     await waitForApp(page);
-    await expect(page.locator('body')).toBeVisible();
+    // LoginModal is a fixed full-screen overlay — body reports as hidden
+    await expect(
+      page.getByRole('button', { name: 'Sign In' }).or(page.getByTestId('tab-intakes'))
+    ).toBeVisible();
   });
 
   // ── Mobile layout ──────────────────────────────────────────────────────────

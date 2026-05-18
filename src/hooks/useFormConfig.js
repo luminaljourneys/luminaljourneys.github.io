@@ -46,11 +46,38 @@ export const DEFAULT_FIELDS = [
   { id: 'f-additionalNotes', step: 2, type: 'textarea', name: 'additionalNotes', label: "Anything else you'd like us to know?", placeholder: 'Share anything that might help us prepare for your visit...', required: false, halfWidth: false, deletable: true, order: 3, options: [] },
 ]
 
+// ── localStorage cache (5 min TTL) — eliminates skeleton flash ───────────────
+const CACHE_KEY = 'lj_form_config'
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { data, expiry } = JSON.parse(raw)
+    if (Date.now() < expiry) return data
+    localStorage.removeItem(CACHE_KEY)
+  } catch { /* ignore */ }
+  return null
+}
+
+function writeCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, expiry: Date.now() + CACHE_TTL }))
+  } catch { /* ignore */ }
+}
+
+export function invalidateFormCache() {
+  try { localStorage.removeItem(CACHE_KEY) } catch { /* ignore */ }
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useFormConfig() {
-  const [fields,  setFields]  = useState(DEFAULT_FIELDS)
-  const [steps,   setSteps]   = useState(DEFAULT_STEPS)
-  const [loading, setLoading] = useState(true)
+  // Initialise from cache immediately → no skeleton flash on repeat visits
+  const cached = readCache()
+  const [fields,  setFields]  = useState(cached?.fields?.length  ? cached.fields  : DEFAULT_FIELDS)
+  const [steps,   setSteps]   = useState(cached?.steps?.length   ? cached.steps   : DEFAULT_STEPS)
+  const [loading, setLoading] = useState(!cached) // already have data → no loading state
 
   useEffect(() => {
     let cancelled = false
@@ -61,6 +88,7 @@ export function useFormConfig() {
           const data = snap.data()
           if (data.fields?.length) setFields(data.fields)
           if (data.steps?.length)  setSteps(data.steps)
+          writeCache({ fields: data.fields ?? DEFAULT_FIELDS, steps: data.steps ?? DEFAULT_STEPS })
         }
       } catch (e) {
         console.warn('[useFormConfig] Using defaults.', e)
@@ -81,6 +109,7 @@ export function useFormConfig() {
     })
     if (newFields) setFields(newFields)
     if (newSteps)  setSteps(newSteps)
+    writeCache({ fields: f, steps: s }) // refresh cache after save
   }
 
   // ── Field CRUD ────────────────────────────────────────────────────────────

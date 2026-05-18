@@ -1,21 +1,22 @@
 /**
  * AdminPage.jsx — Luminal Journeys
- * Password-gated admin dashboard with four tabs:
- *   1. Intakes   — client intake submissions (mock data until Firestore intakes are wired)
+ * Admin dashboard with four tabs:
+ *   1. Intakes   — client intake submissions
  *   2. Form      — add / edit / reorder / delete intake form fields and steps
  *   3. Pages     — add / delete / reorder dynamic site pages
  *   4. Publish   — one-click staging → production push
+ *
+ * Auth is handled entirely by EditModeContext / EditModeToggle.
+ * If not authenticated, shows a gate that triggers the shared login modal.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MockupBanner from "../components/MockupBanner.jsx";
 import { navigate } from "../App.jsx";
 import { useFormConfig } from "../hooks/useFormConfig.js";
 import { useSitePages }  from "../hooks/useSitePages.js";
 import { usePublish }    from "../hooks/usePublish.js";
-
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "luminal2026";
+import { useEditMode }   from "../context/EditModeContext.jsx";
 
 // ─── Shared style tokens ──────────────────────────────────────────────────────
 const S = {
@@ -56,48 +57,17 @@ const STATUS_META  = { New: { bg: "rgba(224,122,95,0.12)", color: "#C4604A", dot
 const STATUS_ORDER = ["New", "Contacted", "Scheduled"];
 const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-// ─── Login ────────────────────────────────────────────────────────────────────
-function LoginModal({ onAuth }) {
-  const [username, setUsername] = useState("");
-  const [pw, setPw]             = useState("");
-  const [error, setError]       = useState(false);
-
-  const submit = () => {
-    if (username === ADMIN_USER && pw === ADMIN_PASS) {
-      sessionStorage.setItem("lj_admin", "true");
-      onAuth();
-    } else { setError(true); setPw(""); }
-  };
-
-  const iStyle = (err) => ({
-    width: "100%", padding: "0.75rem 1rem", boxSizing: "border-box",
-    border: "1.5px solid " + (err ? "#bf8a3e" : "var(--color-border)"),
-    borderRadius: "0.6rem", fontSize: "0.92rem", outline: "none",
-    background: "#e6ddd0", color: "var(--color-text)",
-  });
-
+// ─── Auth gate (shown when not in edit mode) ──────────────────────────────────
+function AdminGate() {
+  const { requestAuth } = useEditMode();
+  // Auto-trigger the login modal when landing on /admin while not authenticated
+  useEffect(() => { requestAuth(); }, []);
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(23,47,45,0.55)", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: "#F9F8F6", borderRadius: "1.2rem", padding: "2.8rem 2.5rem", width: "100%", maxWidth: 400, boxShadow: "0 24px 80px rgba(17,76,92,0.2)", border: "1px solid var(--color-border)", position: "relative", margin: "1rem" }}>
-        <button onClick={() => navigate("/")} style={{ position: "absolute", top: "1.2rem", right: "1.4rem", background: "none", border: "none", cursor: "pointer", color: "#89a99e", fontSize: "1.4rem", lineHeight: 1 }}>×</button>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "1.6rem", color: "#172f2d", marginBottom: "0.3rem" }}>Luminal Journeys</div>
-          <div style={S.labelMono}>Admin Sign In</div>
-        </div>
-        <div style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", ...S.labelMono, marginBottom: "0.4rem" }}>Username</label>
-          <input type="text" value={username} autoFocus onChange={e => { setUsername(e.target.value); setError(false); }} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Admin username" style={iStyle(error)} />
-        </div>
-        <div style={{ marginBottom: "1.2rem" }}>
-          <label style={{ display: "block", ...S.labelMono, marginBottom: "0.4rem" }}>Password</label>
-          <input type="password" value={pw} onChange={e => { setPw(e.target.value); setError(false); }} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Enter password" style={iStyle(error)} />
-        </div>
-        {error && <div style={{ fontSize: "0.82rem", color: "#E07A5F", marginBottom: "1rem", textAlign: "center" }}>Incorrect username or password</div>}
-        <button onClick={submit} style={{ width: "100%", background: "#172f2d", color: "#fff", border: "none", borderRadius: "0.6rem", padding: "0.85rem", fontSize: "0.9rem", cursor: "pointer" }}>Sign In</button>
-        <div style={{ textAlign: "center", marginTop: "1.4rem" }}>
-          <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8rem", color: "#89a99e", fontFamily: "var(--font-mono)" }}>← Back to site</button>
-        </div>
-      </div>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F9F8F6", fontFamily: "'DM Sans', sans-serif", flexDirection: "column", gap: "1.2rem" }}>
+      <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "1.6rem", color: "#172f2d" }}>Luminal Journeys</div>
+      <div style={{ fontSize: "0.82rem", color: "#89a99e", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>Admin</div>
+      <button onClick={() => requestAuth()} style={{ marginTop: "0.5rem", background: "#172f2d", color: "#fff", border: "none", borderRadius: "0.6rem", padding: "0.75rem 2rem", fontSize: "0.9rem", cursor: "pointer" }}>Sign In</button>
+      <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.8rem", color: "#89a99e", fontFamily: "var(--font-mono)" }}>← Back to site</button>
     </div>
   );
 }
@@ -968,6 +938,16 @@ const TABS = [
   { id: "publish",  label: "Publish" },
 ];
 
+function SignOutBtn() {
+  const { lock } = useEditMode();
+  return (
+    <button
+      onClick={() => { lock(); navigate("/"); }}
+      style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)", padding: "0.4rem 1.1rem", borderRadius: "2rem", cursor: "pointer", fontSize: "0.78rem" }}
+    >Sign Out</button>
+  );
+}
+
 function Dashboard() {
   // Support ?tab=form deep-link from Edit Form shortcut on IntakePage
   const initialTab = new URLSearchParams(window.location.search).get("tab") || "intakes";
@@ -985,7 +965,7 @@ function Dashboard() {
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button onClick={() => navigate("/brand")} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)", padding: "0.4rem 1.1rem", borderRadius: "2rem", cursor: "pointer", fontSize: "0.78rem" }}>Brand Kit</button>
-          <button onClick={() => { sessionStorage.removeItem("lj_admin"); navigate("/"); }} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)", padding: "0.4rem 1.1rem", borderRadius: "2rem", cursor: "pointer", fontSize: "0.78rem" }}>Sign Out</button>
+          <SignOutBtn />
         </div>
       </div>
 
@@ -1028,7 +1008,7 @@ function Dashboard() {
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem("lj_admin") === "true");
-  if (!authed) return <LoginModal onAuth={() => setAuthed(true)} />;
+  const { isEditMode } = useEditMode();
+  if (!isEditMode) return <AdminGate />;
   return <Dashboard />;
 }
