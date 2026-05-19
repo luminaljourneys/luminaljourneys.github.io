@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { FORM_CONFIG_COLL, FORM_CONFIG_DOC } from '../lib/collections'
+import { useEditMode } from '../context/EditModeContext.jsx'
 
 // ── Default steps ─────────────────────────────────────────────────────────────
 export const DEFAULT_STEPS = [
@@ -73,6 +74,8 @@ export function invalidateFormCache() {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useFormConfig() {
+  const { recordSave } = useEditMode()
+
   // Initialise from cache immediately → no skeleton flash on repeat visits
   const cached = readCache()
   const [fields,  setFields]  = useState(cached?.fields?.length  ? cached.fields  : DEFAULT_FIELDS)
@@ -110,6 +113,7 @@ export function useFormConfig() {
     if (newFields) setFields(newFields)
     if (newSteps)  setSteps(newSteps)
     writeCache({ fields: f, steps: s }) // refresh cache after save
+    recordSave()                         // update last-saved metadata
   }
 
   // ── Field CRUD ────────────────────────────────────────────────────────────

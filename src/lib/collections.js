@@ -26,3 +26,11 @@ export const PAGES_PROD_COLL = 'pages_production'
 
 // ── Publish audit log ─────────────────────────────────────────────────────────
 export const PUBLISH_COLL = 'publish_history'
+
+// ── Site meta (last saved, authorized editors) ────────────────────────────────
+export const SITE_CONFIG_COLL      = 'site_config'
+export const SITE_META_DOC         = 'meta'
+export const AUTHORIZED_EDITORS_DOC = 'authorized_editors'
+
+// ── Collaborative notes ───────────────────────────────────────────────────────
+export const NOTES_COLL = 'page_notes'

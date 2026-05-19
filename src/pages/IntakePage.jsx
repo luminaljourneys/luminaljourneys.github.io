@@ -692,13 +692,14 @@ export default function IntakePage() {
 
   const canAdvance = useMemo(() => {
     if (isConfirm) return true;
+    if (isEditMode) return true; // admin can always advance to edit each step
     const required = fields.filter(f => f.step === step && f.required && f.type !== "statement");
     return required.every(f => {
       const v = form[f.name];
       if (Array.isArray(v)) return v.length > 0;
       return (v ?? "").toString().trim() !== "";
     });
-  }, [step, fields, form, isConfirm]);
+  }, [step, fields, form, isConfirm, isEditMode]);
 
   // Fields for the currently-visible step
   const currentFields = useMemo(
