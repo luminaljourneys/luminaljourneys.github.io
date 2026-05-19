@@ -120,8 +120,12 @@ export function EditModeProvider({ children }) {
       setOnSuccess(null)
       return { error: null }
     } catch (e) {
-      if (e.code === 'auth/popup-closed-by-user') return { error: null }
-      return { error: 'Google sign-in failed. Please try again.' }
+      console.error('[EditMode] Google sign-in error:', e.code, e.message)
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return { error: null }
+      if (e.code === 'auth/unauthorized-domain') return { error: 'Domain not authorized. In Firebase Console → Auth → Settings → Authorized Domains, add luminaljourneys-staging.web.app' }
+      if (e.code === 'auth/operation-not-allowed') return { error: 'Google sign-in is not enabled. In Firebase Console → Auth → Sign-in method, enable Google.' }
+      if (e.code === 'auth/popup-blocked') return { error: 'Popup was blocked by your browser. Allow popups for this site and try again.' }
+      return { error: `Sign-in failed (${e.code ?? e.message}). Check the browser console for details.` }
     }
   }, [onSuccess, startSession])
 

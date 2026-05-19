@@ -53,7 +53,10 @@ export function usePageNotes() {
         setNotes(docs)
         setLoading(false)
       },
-      () => setLoading(false),
+      (err) => {
+        console.error('[useNotes] Firestore error:', err.code, err.message)
+        setLoading(false)
+      },
     )
     return unsub
   }, [pageId])
