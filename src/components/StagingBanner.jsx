@@ -28,18 +28,20 @@ export default function StagingBanner() {
   const [showNotes,    setShowNotes]    = useState(false)
   const [saveMeta,     setSaveMeta]     = useState(null) // { lastSavedAt (Timestamp), lastSavedBy }
 
-  // Only visible in staging build + authenticated edit session
-  if (!EDIT_ENABLED || !isEditMode || !IS_STAGING) return null
-
-  // ── Listen to last-saved metadata ───────────────────────────────────────
+  // ── All hooks must be called before any early return ─────────────────────
+  // Listen to last-saved metadata (only does real work when visible)
   useEffect(() => {
+    if (!EDIT_ENABLED || !isEditMode || !IS_STAGING) return
     const unsub = onSnapshot(
       doc(db, SITE_CONFIG_COLL, SITE_META_DOC),
       (snap) => { if (snap.exists()) setSaveMeta(snap.data()) },
       () => {},
     )
     return unsub
-  }, [])
+  }, [isEditMode])
+
+  // Only visible in staging build + authenticated edit session
+  if (!EDIT_ENABLED || !isEditMode || !IS_STAGING) return null
 
   const handlePublish = async () => {
     setShowConfirm(false)
