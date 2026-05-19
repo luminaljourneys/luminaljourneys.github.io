@@ -9,11 +9,13 @@ import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { CONTENT_COLL } from '../lib/collections'
+import { useEditMode } from '../context/EditModeContext'
 
 export function useEditableContent(contentKey, fallback) {
   const [content, setContent] = useState(fallback)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const { recordSave, currentUser } = useEditMode()
 
   useEffect(() => {
     let cancelled = false
@@ -37,7 +39,8 @@ export function useEditableContent(contentKey, fallback) {
     return () => { cancelled = true }
   }, [contentKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveContent = async (newText, editor = 'editor') => {
+  const saveContent = async (newText, editor) => {
+    const editorName = currentUser?.displayName ?? editor ?? 'editor'
     const ref  = doc(db, CONTENT_COLL, contentKey)
     const snap = await getDoc(ref)
 
@@ -50,7 +53,7 @@ export function useEditableContent(contentKey, fallback) {
       version:   prevHistory.length,
       text:      newText,
       timestamp: new Date().toISOString(),
-      editor,
+      editor:    editorName,
     }
 
     const updatedHistory = [...prevHistory, newEntry]
@@ -63,6 +66,7 @@ export function useEditableContent(contentKey, fallback) {
 
     setContent(newText)
     setHistory(updatedHistory)
+    recordSave()
   }
 
   return { content, history, loading, saveContent }

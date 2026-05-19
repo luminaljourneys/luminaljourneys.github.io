@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { PAGES_COLL } from '../lib/collections'
+import { useEditMode } from '../context/EditModeContext'
 
 export const DEFAULT_PAGES = []  // No built-in pages — LandingPage, IntakePage, AdminPage are code routes
 
@@ -30,6 +31,7 @@ export const DEFAULT_PAGES = []  // No built-in pages — LandingPage, IntakePag
 export function useSitePages() {
   const [pages,   setPages]   = useState([])
   const [loading, setLoading] = useState(true)
+  const { recordSave } = useEditMode()
 
   useEffect(() => {
     let cancelled = false
@@ -77,6 +79,7 @@ export function useSitePages() {
     await setDoc(doc(db, PAGES_COLL, slug), page)
     const newPage = { id: slug, ...page }
     setPages(prev => [...prev, newPage])
+    recordSave()
     return newPage
   }
 
@@ -86,12 +89,14 @@ export function useSitePages() {
     const updated = { ...changes, updatedAt: serverTimestamp() }
     await setDoc(ref, updated, { merge: true })
     setPages(prev => prev.map(p => p.id === pageId ? { ...p, ...updated } : p))
+    recordSave()
   }
 
   // ── Delete a page ─────────────────────────────────────────────────────────
   const deletePage = async (pageId) => {
     await deleteDoc(doc(db, PAGES_COLL, pageId))
     setPages(prev => prev.filter(p => p.id !== pageId))
+    recordSave()
   }
 
   // ── Reorder ───────────────────────────────────────────────────────────────
@@ -110,6 +115,7 @@ export function useSitePages() {
       if (p.id === b.id) return { ...p, order: a.order }
       return p
     }))
+    recordSave()
   }
 
   return { pages, loading, addPage, updatePage, deletePage, reorderPage }
