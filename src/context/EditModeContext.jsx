@@ -102,10 +102,10 @@ export function EditModeProvider({ children }) {
       // Check authorized editors list in Firestore
       const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
       const authorized = snap.exists()
-        ? (snap.data().emails ?? []).map(e => e.toLowerCase())
+        ? (snap.data().emails ?? []).map(e => e.trim().toLowerCase())
         : []
 
-      if (!authorized.includes(fbUser.email.toLowerCase())) {
+      if (!authorized.includes(fbUser.email.trim().toLowerCase())) {
         await signOut(auth)
         return { error: `${fbUser.email} is not authorized. Ask your admin to add you.` }
       }

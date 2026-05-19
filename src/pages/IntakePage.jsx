@@ -14,6 +14,7 @@ import MockupBanner from "../components/MockupBanner.jsx";
 import { navigate } from "../App.jsx";
 import { useFormConfig } from "../hooks/useFormConfig.js";
 import { useEditMode } from "../context/EditModeContext.jsx";
+import NoteMarker from "../components/NoteMarker.jsx";
 
 // ─── Field type metadata ───────────────────────────────────────────────────────
 const FIELD_TYPE_META = {
@@ -487,21 +488,30 @@ function renderStepFields(stepFields, form, focused, setFocused, onChange, editC
     );
   };
 
-  // Wrap a full row (single or half-width pair) with the right-side + button
-  const wrapRow = (content, rowKey, lastFieldInRow) => {
+  // Wrap a full row (single or half-width pair) with:
+  //   [💬 note marker]  [field(s)]  [+ add button]
+  // noteField = the field whose name becomes the sectionKey for notes
+  const wrapRow = (content, rowKey, lastFieldInRow, noteField) => {
     if (!editConfig) return <React.Fragment key={rowKey}>{content}</React.Fragment>;
+    const sectionKey = `field-${(noteField ?? lastFieldInRow)?.name ?? rowKey}`;
     return (
-      <div key={rowKey} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+      <div key={rowKey} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+
+        {/* 💬 Note marker — left side, aligned with the input line */}
+        <div style={{ flexShrink: 0, marginTop: "1.55rem", display: "flex", alignItems: "center" }}>
+          <NoteMarker sectionKey={sectionKey} />
+        </div>
+
         {/* Field content */}
         <div style={{ flex: 1, minWidth: 0 }}>{content}</div>
 
-        {/* (+) add-after button — vertically aligned with the input (~label height + padding) */}
+        {/* (+) add-after button — right side */}
         <button
           onClick={() => editConfig.onAddAfter(lastFieldInRow)}
           title="Add a new field after this one"
           style={{
             flexShrink: 0,
-            marginTop: "1.55rem",  // clears the label row
+            marginTop: "1.55rem",
             width: 34, height: 34, borderRadius: "50%",
             background: "#fff",
             border: "2px solid rgba(23,47,45,0.22)",
@@ -529,10 +539,10 @@ function renderStepFields(stepFields, form, focused, setFocused, onChange, editC
           {wrapField(next)}
         </div>
       );
-      rows.push(wrapRow(pair, curr.id + "-pair", next)); // + inserts after the pair
+      rows.push(wrapRow(pair, curr.id + "-pair", next, curr)); // note key = first field; + inserts after pair
       i += 2;
     } else {
-      rows.push(wrapRow(wrapField(curr), curr.id, curr));
+      rows.push(wrapRow(wrapField(curr), curr.id, curr, curr));
       i += 1;
     }
   }
