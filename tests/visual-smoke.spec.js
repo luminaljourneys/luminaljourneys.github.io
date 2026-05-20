@@ -35,10 +35,10 @@ for (const route of CORE_ROUTES) {
     );
 
     expect(fatal, `JS errors on ${route}: ${fatal.join('; ')}`).toHaveLength(0);
-    // /admin has a fixed full-screen login overlay — body reports as hidden to Playwright
+    // /admin has a fixed full-screen login overlay — check its unique heading
     if (route === '/admin') {
       await expect(
-        page.getByRole('button', { name: 'Sign In' }).or(page.getByTestId('tab-intakes'))
+        page.getByRole('heading', { name: 'Editor Access' }).or(page.getByTestId('tab-intakes'))
       ).toBeVisible();
     } else {
       await expect(page.locator('body')).toBeVisible();

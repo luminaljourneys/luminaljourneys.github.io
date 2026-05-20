@@ -99,4 +99,14 @@ qa-report:
 qa-file:
 	cd $(ROOT) && npx playwright test $(f) --project=chromium
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-report qa-file
+# Run tests against live staging URL (no local Vite server needed)
+# Usage: make qa-staging
+qa-staging:
+	cd $(ROOT) && npx playwright test --config=playwright.staging.config.js --project=chromium
+
+# Run login tests only against local dev server
+# Usage: make qa-login
+qa-login:
+	cd $(ROOT) && npx playwright test tests/login.spec.js --project=chromium
+
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-report qa-file qa-staging qa-login

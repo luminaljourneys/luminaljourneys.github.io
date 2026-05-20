@@ -371,10 +371,14 @@ function LoginModal() {
         border: '1px solid rgba(23,47,45,0.12)',
         maxHeight: '92vh', overflowY: 'auto',
       }}>
-        <div style={{
-          fontFamily: "'DM Serif Display', Georgia, serif",
-          fontSize: '1.5rem', color: '#172f2d', marginBottom: '0.3rem',
-        }}>
+        <div
+          role="heading"
+          aria-level={2}
+          style={{
+            fontFamily: "'DM Serif Display', Georgia, serif",
+            fontSize: '1.5rem', color: '#172f2d', marginBottom: '0.3rem',
+          }}
+        >
           Editor Access
         </div>
         <p style={{ fontSize: '0.83rem', color: '#89a99e', marginBottom: '1.6rem', lineHeight: 1.5 }}>

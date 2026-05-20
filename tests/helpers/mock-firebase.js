@@ -1,22 +1,16 @@
 /**
  * helpers/mock-firebase.js
  *
- * Intercepts ALL Firestore REST + WebChannel network calls and returns
- * fixture data instantly. Tests NEVER hit the real Firebase network —
- * this is what makes the suite fast.
+ * Intercepts ALL Firestore REST + Firebase Auth identity toolkit calls.
+ * Tests NEVER hit the real Firebase network — instant, deterministic.
+ *
+ * Mocked surfaces:
+ *   - Firestore (site_config/*, pages_*, content_edits_*, writes)
+ *   - Firebase Auth OOB codes (magic link sendSignInLinkToEmail)
  *
  * Usage:
- *   import { mockFirebase } from './helpers/mock-firebase.js';
- *
- *   test.beforeEach(async ({ page }) => {
- *     await mockFirebase(page);
- *   });
- *
- * How it works:
- *   Firebase JS SDK v9+ uses the Firestore REST API over HTTPS.
- *   We intercept **.googleapis.com/google.firestore** and
- *   **firestore.googleapis.com** routes and return the appropriate
- *   Firestore REST response shape for each collection.
+ *   import { mockFirebase, waitForApp } from './helpers/mock-firebase.js';
+ *   test.beforeEach(async ({ page }) => { await mockFirebase(page); });
  */
 
 import { FORM_CONFIG_FIXTURE } from '../fixtures/form-config.js';
@@ -24,7 +18,6 @@ import { MOCK_PAGES }           from '../fixtures/pages.js';
 
 // ── Firestore REST response helpers ──────────────────────────────────────────
 
-/** Wrap a plain JS object into a Firestore REST document shape */
 function firestoreDoc(name, fields) {
   const wrap = (v) => {
     if (typeof v === 'string')  return { stringValue: v };
@@ -40,24 +33,80 @@ function firestoreDoc(name, fields) {
     name,
     fields: Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, wrap(v)])),
     createTime: '2026-01-01T00:00:00Z',
-    updateTime: '2026-05-18T00:00:00Z',
+    updateTime: '2026-05-19T00:00:00Z',
   };
 }
 
-/** Wrap an array of docs into a Firestore runQuery response */
 function firestoreQueryResponse(docs) {
-  return docs.map(doc => ({ document: doc, readTime: '2026-05-18T00:00:00Z' }));
+  return docs.map(doc => ({ document: doc, readTime: '2026-05-19T00:00:00Z' }));
 }
+
+// ── Mock data ─────────────────────────────────────────────────────────────────
+
+const MOCK_AUTHORIZED_EDITORS = {
+  emails: [
+    'hi@keeya.nl',
+    'keeya@springsparrowhousing.com',
+    'wouter@keijser.com',
+    'dpendragon@pacbell.net',
+  ],
+};
 
 // ── Main mock installer ───────────────────────────────────────────────────────
 
 export async function mockFirebase(page) {
-  // Intercept ALL requests to Firestore endpoints
+
+  // ── Firebase Auth: magic link OOB send ───────────────────────────────────
+  await page.route('**identitytoolkit.googleapis.com/**sendOobCode**', async (route) => {
+    const body = (() => { try { return route.request().postDataJSON(); } catch { return {}; } })();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ email: body?.email ?? 'test@example.com' }),
+    });
+  });
+
+  // ── Firebase Auth: other identity toolkit calls ───────────────────────────
+  await page.route('**identitytoolkit.googleapis.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ idToken: 'mock-token', email: 'test@example.com', localId: 'mock-uid' }),
+    });
+  });
+
+  // ── Firestore ─────────────────────────────────────────────────────────────
   await page.route('**firestore.googleapis.com/**', async (route) => {
-    const url = route.request().url();
+    const url    = route.request().url();
     const method = route.request().method();
 
-    // ── Form config reads (getDoc on site_config/form_staging) ───────────────
+    // authorized_editors — must be checked BEFORE the generic site_config catch
+    if (url.includes('authorized_editors')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(firestoreDoc(
+          'projects/lj/databases/(default)/documents/site_config/authorized_editors',
+          MOCK_AUTHORIZED_EDITORS,
+        )),
+      });
+      return;
+    }
+
+    // site_config/meta
+    if (url.includes('/meta')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(firestoreDoc(
+          'projects/lj/databases/(default)/documents/site_config/meta',
+          { lastSavedBy: { displayName: 'Admin', email: 'admin' } },
+        )),
+      });
+      return;
+    }
+
+    // site_config (form_staging / form_production)
     if (url.includes('site_config') && (method === 'GET' || method === 'POST')) {
       await route.fulfill({
         status: 200,
@@ -70,9 +119,9 @@ export async function mockFirebase(page) {
       return;
     }
 
-    // ── Pages collection reads (pages_staging) ────────────────────────────────
+    // pages collection
     if (url.includes('pages_staging') || url.includes('pages_production')) {
-      const docs = MOCK_PAGES.map((p, i) =>
+      const docs = MOCK_PAGES.map(p =>
         firestoreDoc(`projects/lj/databases/(default)/documents/pages_staging/${p.id}`, p)
       );
       await route.fulfill({
@@ -83,38 +132,33 @@ export async function mockFirebase(page) {
       return;
     }
 
-    // ── Content edits reads ────────────────────────────────────────────────────
+    // content edits
     if (url.includes('content_edits')) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]), // empty — fallbacks render
+        body: JSON.stringify([]),
       });
       return;
     }
 
-    // ── Writes (setDoc, addDoc, updateDoc) — succeed silently ─────────────────
+    // writes — succeed silently
     if (['POST', 'PATCH', 'DELETE'].includes(method)) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
       return;
     }
 
-    // ── Everything else — pass through (auth, storage, etc.) ──────────────────
+    // everything else (auth handshake, storage)
     await route.continue();
   });
 
-  // Also intercept WebChannel (Firestore real-time listener fallback)
+  // WebChannel (Firestore real-time listener fallback)
   await page.route('**google.firestore.v1.Firestore**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 }
 
-/**
- * Wait for the app to be ready after navigation.
- * Uses network idle instead of arbitrary timeouts.
- */
 export async function waitForApp(page) {
   await page.waitForLoadState('domcontentloaded');
-  // Brief tick for React to render after Firebase resolves
   await page.waitForFunction(() => document.readyState === 'complete');
 }
