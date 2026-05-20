@@ -1,13 +1,26 @@
 import { useState } from "react";
+import { useEditMode } from "../context/EditModeContext";
 
 export default function MockupBanner() {
   const [open, setOpen] = useState(false);
+  const { isEditMode } = useEditMode();
+
+  // Only visible to logged-in authorized editors
+  if (!isEditMode) return null;
 
   const goToBrandKit = () => {
     setOpen(false);
     window.history.pushState({}, "", "/brand");
     window.dispatchEvent(new Event("routechange"));
   };
+
+  const items = [
+    { text: "Waiting on real intake form field inputs", done: false },
+    { text: "Firestore database connection", done: true },
+    { text: "Capture intake form submitter email address", done: false },
+    { text: "Post-form email: next steps + booking link", done: false },
+    { text: "Appointment scheduling — client books intro call", done: false },
+  ];
 
   return (
     <>
@@ -73,20 +86,22 @@ export default function MockupBanner() {
               <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#89a99e", marginBottom: "0.6rem" }}>
                 Pending before launch
               </div>
-              {[
-                "Waiting on real intake form field inputs",
-                "Firestore database connection",
-                "Auth0 authentication",
-                "Appointment scheduling fields",
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.4rem", fontSize: "0.85rem", color: "#172f2d" }}>
-                  <span style={{ color: "#bf8a3e", marginTop: "0.1rem", flexShrink: 0 }}>○</span>
-                  {item}
+              {items.map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginBottom: "0.4rem", fontSize: "0.85rem" }}>
+                  <span style={{ color: item.done ? "#2C5F4A" : "#bf8a3e", marginTop: "0.1rem", flexShrink: 0 }}>
+                    {item.done ? "✓" : "○"}
+                  </span>
+                  <span style={{
+                    color: item.done ? "#89a99e" : "#172f2d",
+                    textDecoration: item.done ? "line-through" : "none",
+                  }}>
+                    {item.text}
+                  </span>
                 </div>
               ))}
             </div>
 
-            {/* View Brand Kit CTA */}
+            {/* View Brand Kit — only for authorized editors (already gated by parent) */}
             <button onClick={goToBrandKit} style={{
               width: "100%", background: "#e6ddd0", color: "#172f2d",
               border: "1.5px solid var(--color-border)", borderRadius: "0.6rem", padding: "0.8rem",
