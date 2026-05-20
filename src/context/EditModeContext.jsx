@@ -184,21 +184,23 @@ export function EditModeProvider({ children }) {
 
   // ── Google Sign-In ────────────────────────────────────────────────────────
   const signInWithGoogle = useCallback(async () => {
+    console.log('[Google] 1 — opening popup')
     try {
       const provider = new GoogleAuthProvider()
       provider.addScope('email')
       provider.addScope('profile')
       const result = await signInWithPopup(auth, provider)
       const fbUser = result.user
+      console.log('[Google] 2 — popup resolved, uid:', fbUser.uid, 'email:', fbUser.email)
 
       const rawEmail = fbUser.email || fbUser.providerData?.[0]?.email || ''
-      console.log('[EditMode] Google sign-in user:', {
-        email:         fbUser.email,
-        providerEmail: fbUser.providerData?.[0]?.email,
-        displayName:   fbUser.displayName,
-      })
+
+      console.log('[Google] 3 — forcing token refresh')
+      await fbUser.getIdToken(true)
+      console.log('[Google] 4 — token refreshed, reading authorized_editors')
 
       const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
+      console.log('[Google] 5 — authorized_editors read, exists:', snap.exists())
       const authorized = snap.exists()
         ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
         : []
@@ -215,16 +217,19 @@ export function EditModeProvider({ children }) {
         email:       rawEmail,
         photoURL:    fbUser.photoURL || null,
       }
+      console.log('[Google] 6 — starting session for', user.email)
       startSession(user)
       onSuccess?.()
       setOnSuccess(null)
+      console.log('[Google] 7 — sign-in complete ✓')
       return { error: null }
     } catch (e) {
-      console.error('[EditMode] Google sign-in error:', e.code, e.message)
+      console.error('[Google] ✗ caught error — code:', e.code, '| message:', e.message, '| full:', e)
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return { error: null }
       if (e.code === 'auth/unauthorized-domain') return { error: 'Domain not authorized. Add this domain in Firebase Console → Auth → Settings → Authorized Domains.' }
       if (e.code === 'auth/operation-not-allowed') return { error: 'Google sign-in is not enabled. Enable it in Firebase Console → Auth → Sign-in method.' }
       if (e.code === 'auth/popup-blocked') return { error: 'Popup blocked. Allow popups for this site and try again.' }
+      if (e.code === 'permission-denied') return { error: 'Firestore permission denied reading the editors list. Make sure Firestore rules are deployed: firebase deploy --only firestore:rules' }
       return { error: `Sign-in failed (${e.code ?? e.message}). Check the browser console for details.` }
     }
   }, [onSuccess, startSession])
