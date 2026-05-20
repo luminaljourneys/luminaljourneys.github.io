@@ -1,26 +1,39 @@
 /**
  * EditModeContext.jsx — Luminal Journeys
  *
- * Auth system for the entire site. Two paths into edit mode:
+ * Auth system for the entire site. Three paths into edit mode:
  *
- *   1. Google Sign-In  — checks Firestore site_config/authorized_editors
- *      { emails: ["keeya@...", "user@..."] } before granting access.
- *      Identity (displayName, email, photoURL) is preserved as currentUser.
+ *   1. Google Sign-In   — checks Firestore site_config/authorized_editors
+ *      { emails: [...] } before granting access.
+ *      Identity (displayName, email, photoURL) preserved as currentUser.
  *
- *   2. Password login  — username "admin" + VITE_EDIT_PASSWORD, for QA.
+ *   2. Email magic link — passwordless sign-in via Firebase Email Link.
+ *      For non-Gmail authorized editors (e.g. wouter@keijser.com).
+ *      User enters email → receives link → clicks it → lands back signed in.
+ *      Same authorized_editors check as Google path.
+ *
+ *   3. Password login   — username "admin" + VITE_EDIT_PASSWORD, for QA.
  *      currentUser = { displayName: 'Admin', email: 'admin', photoURL: null }
  *
  * Exports:
- *   isEditMode      — boolean
- *   currentUser     — { displayName, email, photoURL } | null
- *   requestAuth()   — show login modal from anywhere
- *   lock()          — exit edit mode
- *   recordSave()    — write site_config/meta with last-saved timestamp + author
+ *   isEditMode        — boolean
+ *   currentUser       — { displayName, email, photoURL } | null
+ *   requestAuth()     — show login modal from anywhere
+ *   lock()            — exit edit mode
+ *   recordSave()      — write site_config/meta with last-saved timestamp + author
  *   signInWithGoogle()
+ *   sendMagicLink(email) → { error }
  */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink,
+} from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import {
@@ -29,8 +42,9 @@ import {
   SITE_META_DOC,
 } from '../lib/collections'
 
-const STORAGE_KEY = 'lj_edit_session'
-const SESSION_MS  = 30 * 24 * 60 * 60 * 1000 // 30 days
+const STORAGE_KEY      = 'lj_edit_session'
+const MAGIC_EMAIL_KEY  = 'lj_magic_link_email'
+const SESSION_MS       = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 const EditModeContext = createContext({
   isEditMode:       false,
@@ -39,6 +53,7 @@ const EditModeContext = createContext({
   unlock:           () => false,
   lock:             () => {},
   signInWithGoogle: async () => ({ error: null }),
+  sendMagicLink:    async () => ({ error: null }),
   recordSave:       () => {},
   showModal:        false,
   dismissModal:     () => {},
@@ -59,6 +74,7 @@ export function EditModeProvider({ children }) {
         if (Date.now() < expiry) {
           setIsEditMode(true)
           setCurrentUser(user ?? null)
+          return
         } else {
           localStorage.removeItem(STORAGE_KEY)
         }
@@ -66,9 +82,56 @@ export function EditModeProvider({ children }) {
     } catch {
       localStorage.removeItem(STORAGE_KEY)
     }
-  }, [])
 
-  // ── Start a session (shared by both auth paths) ──────────────────────────
+    // ── Complete magic-link sign-in if URL contains a link ─────────────────
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = localStorage.getItem(MAGIC_EMAIL_KEY)
+      if (!email) {
+        // Fallback: prompt in case they opened on a different device
+        email = window.prompt('Please confirm your email to complete sign-in:')
+      }
+      if (email) {
+        signInWithEmailLink(auth, email, window.location.href)
+          .then(async (result) => {
+            localStorage.removeItem(MAGIC_EMAIL_KEY)
+            // Clean the link params from the URL
+            window.history.replaceState({}, '', window.location.pathname)
+
+            const fbUser   = result.user
+            const rawEmail = (fbUser.email || email).trim().toLowerCase()
+
+            const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
+            const authorized = snap.exists()
+              ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
+              : []
+
+            if (!authorized.includes(rawEmail)) {
+              await signOut(auth)
+              console.warn('[EditMode] Magic link — email not authorized:', rawEmail)
+              return
+            }
+
+            const user = {
+              displayName: fbUser.displayName || rawEmail.split('@')[0],
+              email:       fbUser.email || email,
+              photoURL:    fbUser.photoURL || null,
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+              expiry: Date.now() + SESSION_MS,
+              user,
+            }))
+            setCurrentUser(user)
+            setIsEditMode(true)
+          })
+          .catch(e => {
+            console.error('[EditMode] Magic link completion error:', e.code, e.message)
+            localStorage.removeItem(MAGIC_EMAIL_KEY)
+          })
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Start a session (shared by all auth paths) ───────────────────────────
   const startSession = useCallback((user) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       expiry: Date.now() + SESSION_MS,
@@ -98,19 +161,16 @@ export function EditModeProvider({ children }) {
       const provider = new GoogleAuthProvider()
       provider.addScope('email')
       provider.addScope('profile')
-      const result   = await signInWithPopup(auth, provider)
-      const fbUser   = result.user
+      const result = await signInWithPopup(auth, provider)
+      const fbUser = result.user
 
-      // Email fallback: user.email → providerData[0].email → ''
       const rawEmail = fbUser.email || fbUser.providerData?.[0]?.email || ''
       console.log('[EditMode] Google sign-in user:', {
         email:         fbUser.email,
         providerEmail: fbUser.providerData?.[0]?.email,
         displayName:   fbUser.displayName,
-        uid:           fbUser.uid,
       })
 
-      // Check authorized editors list in Firestore
       const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
       const authorized = snap.exists()
         ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
@@ -135,12 +195,44 @@ export function EditModeProvider({ children }) {
     } catch (e) {
       console.error('[EditMode] Google sign-in error:', e.code, e.message)
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return { error: null }
-      if (e.code === 'auth/unauthorized-domain') return { error: 'Domain not authorized. In Firebase Console → Auth → Settings → Authorized Domains, add luminaljourneys-staging.web.app' }
-      if (e.code === 'auth/operation-not-allowed') return { error: 'Google sign-in is not enabled. In Firebase Console → Auth → Sign-in method, enable Google.' }
-      if (e.code === 'auth/popup-blocked') return { error: 'Popup was blocked by your browser. Allow popups for this site and try again.' }
+      if (e.code === 'auth/unauthorized-domain') return { error: 'Domain not authorized. Add this domain in Firebase Console → Auth → Settings → Authorized Domains.' }
+      if (e.code === 'auth/operation-not-allowed') return { error: 'Google sign-in is not enabled. Enable it in Firebase Console → Auth → Sign-in method.' }
+      if (e.code === 'auth/popup-blocked') return { error: 'Popup blocked. Allow popups for this site and try again.' }
       return { error: `Sign-in failed (${e.code ?? e.message}). Check the browser console for details.` }
     }
   }, [onSuccess, startSession])
+
+  // ── Email magic link (passwordless) ──────────────────────────────────────
+  const sendMagicLink = useCallback(async (email) => {
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed) return { error: 'Please enter your email address.' }
+
+    try {
+      // Check authorized list before sending — fail fast for unknown emails
+      const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
+      const authorized = snap.exists()
+        ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
+        : []
+
+      if (!authorized.includes(trimmed)) {
+        return { error: `${email} is not authorized. Ask your admin to add you.` }
+      }
+
+      const actionCodeSettings = {
+        url:              window.location.origin + window.location.pathname,
+        handleCodeInApp:  true,
+      }
+
+      await sendSignInLinkToEmail(auth, trimmed, actionCodeSettings)
+      localStorage.setItem(MAGIC_EMAIL_KEY, trimmed)
+      return { error: null }
+    } catch (e) {
+      console.error('[EditMode] Magic link send error:', e.code, e.message)
+      if (e.code === 'auth/invalid-email') return { error: 'Invalid email address.' }
+      if (e.code === 'auth/operation-not-allowed') return { error: 'Passwordless sign-in is not enabled. Enable "Email link" in Firebase Console → Auth → Sign-in method → Email/Password.' }
+      return { error: `Could not send link (${e.code ?? e.message}). Try again or contact your admin.` }
+    }
+  }, [])
 
   // ── Show the login modal ──────────────────────────────────────────────────
   const requestAuth = useCallback((cb) => {
@@ -182,6 +274,7 @@ export function EditModeProvider({ children }) {
       requestAuth,
       unlock,
       signInWithGoogle,
+      sendMagicLink,
       lock,
       dismissModal,
       recordSave,
@@ -196,14 +289,19 @@ export const useEditMode = () => useContext(EditModeContext)
 
 // ── Login Modal ───────────────────────────────────────────────────────────────
 function LoginModal() {
-  const { unlock, signInWithGoogle, dismissModal } = useEditMode()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const { unlock, signInWithGoogle, sendMagicLink, dismissModal } = useEditMode()
+
+  const [username,    setUsername]    = useState('')
+  const [password,    setPassword]    = useState('')
+  const [linkEmail,   setLinkEmail]   = useState('')
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
+  const [linkSent,    setLinkSent]    = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
 
   const handlePassword = (e) => {
     e.preventDefault()
+    setError('')
     const ok = unlock(username, password)
     if (!ok) setError('Incorrect credentials.')
   }
@@ -214,6 +312,19 @@ function LoginModal() {
     const { error: err } = await signInWithGoogle()
     setLoading(false)
     if (err) setError(err)
+  }
+
+  const handleMagicLink = async (e) => {
+    e.preventDefault()
+    setLinkLoading(true)
+    setError('')
+    const { error: err } = await sendMagicLink(linkEmail)
+    setLinkLoading(false)
+    if (err) {
+      setError(err)
+    } else {
+      setLinkSent(true)
+    }
   }
 
   return (
@@ -228,9 +339,10 @@ function LoginModal() {
     >
       <div style={{
         background: '#F9F8F6', borderRadius: '1.1rem',
-        padding: '2.4rem 2.5rem', width: 360, maxWidth: '92vw',
+        padding: '2.4rem 2.5rem', width: 380, maxWidth: '92vw',
         boxShadow: '0 24px 80px rgba(0,0,0,0.22)',
         border: '1px solid rgba(23,47,45,0.12)',
+        maxHeight: '92vh', overflowY: 'auto',
       }}>
         <div style={{
           fontFamily: "'DM Serif Display', Georgia, serif",
@@ -242,7 +354,7 @@ function LoginModal() {
           Sign in to edit content on this page.
         </p>
 
-        {/* ── Google Sign-In ── */}
+        {/* ── 1. Google Sign-In ── */}
         <button
           onClick={handleGoogle}
           disabled={loading}
@@ -262,17 +374,68 @@ function LoginModal() {
           {loading ? 'Signing in…' : 'Continue with Google'}
         </button>
 
-        {/* ── Divider ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(23,47,45,0.12)' }} />
-          <span style={{ fontSize: '0.72rem', color: '#89a99e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            or
-          </span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(23,47,45,0.12)' }} />
-        </div>
+        <Divider />
 
-        {/* ── Password login ── */}
+        {/* ── 2. Email magic link ── */}
+        {linkSent ? (
+          <div style={{
+            background: 'rgba(44,95,74,0.08)', borderRadius: '0.6rem',
+            padding: '1rem 1.1rem', marginBottom: '1.2rem', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>✉️</div>
+            <p style={{ fontSize: '0.88rem', color: '#172f2d', margin: 0, lineHeight: 1.6 }}>
+              Check your inbox at <strong>{linkEmail}</strong>.<br />
+              Click the link to sign in — it expires in 1 hour.
+            </p>
+            <button
+              onClick={() => { setLinkSent(false); setLinkEmail('') }}
+              style={{
+                marginTop: '0.8rem', background: 'none', border: 'none',
+                color: '#89a99e', fontSize: '0.78rem', cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Use a different email
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleMagicLink} style={{ marginBottom: '1.2rem' }}>
+            <label style={{ fontSize: '0.75rem', color: '#89a99e', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+              Sign in with email link
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={linkEmail}
+                onChange={e => setLinkEmail(e.target.value)}
+                autoComplete="email"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button
+                type="submit"
+                disabled={linkLoading || !linkEmail.trim()}
+                style={{
+                  background: linkLoading || !linkEmail.trim() ? '#89a99e' : '#2C5F4A',
+                  color: '#fff', border: 'none', borderRadius: '0.5rem',
+                  padding: '0 1rem', cursor: linkLoading || !linkEmail.trim() ? 'default' : 'pointer',
+                  fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap',
+                  fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s',
+                }}
+              >
+                {linkLoading ? '…' : 'Send link'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <Divider />
+
+        {/* ── 3. Password login (admin / QA) ── */}
         <form onSubmit={handlePassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+          <label style={{ fontSize: '0.75rem', color: '#89a99e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Admin password
+          </label>
           <input
             type="text" placeholder="Username" value={username}
             onChange={e => setUsername(e.target.value)}
@@ -292,11 +455,22 @@ function LoginModal() {
             background: '#172f2d', color: '#fff', border: 'none',
             padding: '0.7rem', borderRadius: '0.6rem', cursor: 'pointer',
             fontSize: '0.9rem', fontWeight: 600, marginTop: '0.2rem',
+            fontFamily: "'DM Sans', sans-serif",
           }}>
             Sign in
           </button>
         </form>
       </div>
+    </div>
+  )
+}
+
+function Divider() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.2rem' }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(23,47,45,0.12)' }} />
+      <span style={{ fontSize: '0.72rem', color: '#89a99e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>or</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(23,47,45,0.12)' }} />
     </div>
   )
 }
