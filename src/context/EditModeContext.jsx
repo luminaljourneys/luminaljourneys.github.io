@@ -96,8 +96,19 @@ export function EditModeProvider({ children }) {
   const signInWithGoogle = useCallback(async () => {
     try {
       const provider = new GoogleAuthProvider()
+      provider.addScope('email')
+      provider.addScope('profile')
       const result   = await signInWithPopup(auth, provider)
       const fbUser   = result.user
+
+      // Email fallback: user.email → providerData[0].email → ''
+      const rawEmail = fbUser.email || fbUser.providerData?.[0]?.email || ''
+      console.log('[EditMode] Google sign-in user:', {
+        email:         fbUser.email,
+        providerEmail: fbUser.providerData?.[0]?.email,
+        displayName:   fbUser.displayName,
+        uid:           fbUser.uid,
+      })
 
       // Check authorized editors list in Firestore
       const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
@@ -105,16 +116,16 @@ export function EditModeProvider({ children }) {
         ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
         : []
 
-      const userEmail = (fbUser.email ?? '').trim().toLowerCase()
+      const userEmail = rawEmail.trim().toLowerCase()
       if (!userEmail || !authorized.includes(userEmail)) {
         await signOut(auth)
-        const who = fbUser.email ?? 'This account'
+        const who = rawEmail || 'This account'
         return { error: `${who} is not authorized. Ask your admin to add you.` }
       }
 
       const user = {
         displayName: fbUser.displayName || userEmail.split('@')[0],
-        email:       fbUser.email,
+        email:       rawEmail,
         photoURL:    fbUser.photoURL || null,
       }
       startSession(user)
