@@ -119,6 +119,13 @@ a { cursor: pointer; }
   z-index: 9999;
   animation: ep-slide-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
+  /* Reset inherited styles from hero heading / em tags */
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: 16px;
+  letter-spacing: normal;
+  font-weight: 400;
+  line-height: 1.5;
   flex-direction: column;
 }
 @keyframes ep-slide-up {

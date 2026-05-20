@@ -29,7 +29,7 @@ export default function EditPanel({ contentKey, currentText, history, onSave, on
     textareaRef.current?.select()
   }, [])
 
-  const isDirty = rewrite.trim() !== '' && rewrite !== currentText
+  const isDirty = rewrite !== currentText
 
   const handleSubmit = async () => {
     if (!isDirty) { setError('No changes detected.'); return }
