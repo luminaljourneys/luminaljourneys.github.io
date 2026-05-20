@@ -52,6 +52,7 @@ const WARN_SECS        = 60                         // countdown seconds before 
 const EditModeContext = createContext({
   isEditMode:       false,
   currentUser:      null,
+  hasFirebaseAuth:  false,
   requestAuth:      () => {},
   unlock:           () => false,
   lock:             () => {},
@@ -66,6 +67,7 @@ const EditModeContext = createContext({
 export function EditModeProvider({ children }) {
   const [isEditMode,        setIsEditMode]        = useState(false)
   const [currentUser,       setCurrentUser]       = useState(null)
+  const [hasFirebaseAuth,   setHasFirebaseAuth]   = useState(false) // true = Google or magic link
   const [showModal,         setShowModal]          = useState(false)
   const [onSuccess,         setOnSuccess]          = useState(null)
   const [inactivityWarning, setInactivityWarning] = useState(false)
@@ -141,16 +143,16 @@ export function EditModeProvider({ children }) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Sync Firebase Auth state → keeps auth.currentUser fresh for Firestore ─
-  // Without this, a page reload after Google/magic-link sign-in would show
-  // the user as logged in (via localStorage) but have no Firebase Auth token,
-  // causing every Firestore write to fail with permission-denied.
+  // ── Sync Firebase Auth state → drives hasFirebaseAuth ────────────────────
+  // hasFirebaseAuth = true  → Google or magic link session (can write to Firestore)
+  // hasFirebaseAuth = false → password/admin session or signed out (read-only)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
+      setHasFirebaseAuth(!!fbUser)
       if (fbUser) {
-        console.log('[EditMode] Firebase Auth restored:', fbUser.email)
+        console.log('[EditMode] Firebase Auth active:', fbUser.email)
       } else {
-        console.log('[EditMode] Firebase Auth: no user (password session or signed out)')
+        console.log('[EditMode] Firebase Auth: none (password session or signed out)')
       }
     })
     return unsub
@@ -289,17 +291,23 @@ export function EditModeProvider({ children }) {
   // ── Show the login modal ──────────────────────────────────────────────────
   const requestAuth = useCallback((cb) => {
     if (isEditMode) { cb?.(); return }
-    // Session still alive — re-enter edit mode instantly, no login needed
-    if (currentUser) { setIsEditMode(true); cb?.(); return }
+    // Firebase Auth session still alive → re-enter instantly, no modal
+    if (currentUser && hasFirebaseAuth) { setIsEditMode(true); cb?.(); return }
     setOnSuccess(() => cb ?? null)
     setShowModal(true)
-  }, [isEditMode, currentUser])
+  }, [isEditMode, currentUser, hasFirebaseAuth])
 
-  // ── Exit edit mode (keeps session + Firebase Auth token alive) ────────────
-  // User can click "Edit Site" again to instantly re-enter without re-auth.
+  // ── Exit edit mode ────────────────────────────────────────────────────────
+  // Firebase Auth sessions (Google / magic link): keep session alive so the
+  // editor can preview the site and resume without re-authenticating.
+  // Password/admin sessions: sign out fully (QA role, no persistent session).
   const lock = useCallback(() => {
-    setIsEditMode(false)
-  }, [])
+    if (hasFirebaseAuth) {
+      setIsEditMode(false)   // just toggle the UI — session stays alive
+    } else {
+      signOutFully()         // admin/password: clean exit
+    }
+  }, [hasFirebaseAuth, signOutFully])
 
   // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
   const signOutFully = useCallback(async () => {
@@ -332,9 +340,10 @@ export function EditModeProvider({ children }) {
     }, INACTIVITY_MS)
   }, [signOutFully])
 
-  // Start/stop inactivity tracking when a real session exists
+  // Start/stop inactivity tracking — Firebase Auth sessions only
+  // Admin/password sessions don't get the timer (QA role, short-lived by design)
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !hasFirebaseAuth) {
       clearTimeout(inactivityTimer.current)
       clearInterval(countdownTimer.current)
       return
@@ -354,7 +363,7 @@ export function EditModeProvider({ children }) {
       clearTimeout(inactivityTimer.current)
       clearInterval(countdownTimer.current)
     }
-  }, [currentUser, resetInactivity])
+  }, [currentUser, hasFirebaseAuth, resetInactivity])
 
   const dismissModal = useCallback(() => {
     setShowModal(false)
@@ -377,6 +386,7 @@ export function EditModeProvider({ children }) {
     <EditModeContext.Provider value={{
       isEditMode,
       currentUser,
+      hasFirebaseAuth,
       showModal,
       requestAuth,
       unlock,

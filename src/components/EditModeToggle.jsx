@@ -24,10 +24,11 @@ export default function EditModeToggle() {
 }
 
 function EditModeToggleInner() {
-  const { isEditMode, currentUser, requestAuth, lock, signOutFully } = useEditMode()
+  const { isEditMode, currentUser, hasFirebaseAuth, requestAuth, lock, signOutFully } = useEditMode()
 
-  // Session is alive but not in edit mode — show a subtle "Resume" button
-  const hasSession = !isEditMode && !!currentUser
+  // Only Firebase Auth sessions (Google / magic link) get the Resume button.
+  // Admin/password: lock() signs out fully, so currentUser is null and this is false.
+  const hasSession = !isEditMode && !!currentUser && hasFirebaseAuth
 
   return (
     <div style={{
