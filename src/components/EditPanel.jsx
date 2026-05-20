@@ -48,8 +48,12 @@ export default function EditPanel({ contentKey, currentText, history, onSave, on
         setTimeout(() => document.body.removeChild(toast), 300)
       }, 2200)
       onClose()
-    } catch {
-      setError('Save failed. Check your connection and try again.')
+    } catch (err) {
+      console.error('[EditPanel] Save failed:', err?.code, err?.message, err)
+      const msg = err?.code === 'permission-denied'
+        ? 'Permission denied. Make sure you are signed in with an authorized Google or email-link account (not password login).'
+        : `Save failed: ${err?.message ?? 'Check your connection and try again.'}`
+      setError(msg)
       setSaving(false)
     }
   }
