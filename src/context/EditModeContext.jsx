@@ -25,7 +25,7 @@
  *   sendMagicLink(email) → { error }
  */
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -46,6 +46,8 @@ import {
 const STORAGE_KEY      = 'lj_edit_session'
 const MAGIC_EMAIL_KEY  = 'lj_magic_link_email'
 const SESSION_MS       = 30 * 24 * 60 * 60 * 1000 // 30 days
+const INACTIVITY_MS    = 15 * 60 * 1000            // 15 minutes
+const WARN_SECS        = 60                         // countdown seconds before auto sign-out
 
 const EditModeContext = createContext({
   isEditMode:       false,
@@ -53,6 +55,7 @@ const EditModeContext = createContext({
   requestAuth:      () => {},
   unlock:           () => false,
   lock:             () => {},
+  signOutFully:     async () => {},
   signInWithGoogle: async () => ({ error: null }),
   sendMagicLink:    async () => ({ error: null }),
   recordSave:       () => {},
@@ -61,10 +64,14 @@ const EditModeContext = createContext({
 })
 
 export function EditModeProvider({ children }) {
-  const [isEditMode,  setIsEditMode]  = useState(false)
-  const [currentUser, setCurrentUser] = useState(null)
-  const [showModal,   setShowModal]   = useState(false)
-  const [onSuccess,   setOnSuccess]   = useState(null)
+  const [isEditMode,        setIsEditMode]        = useState(false)
+  const [currentUser,       setCurrentUser]       = useState(null)
+  const [showModal,         setShowModal]          = useState(false)
+  const [onSuccess,         setOnSuccess]          = useState(null)
+  const [inactivityWarning, setInactivityWarning] = useState(false)
+  const [warnCountdown,     setWarnCountdown]      = useState(WARN_SECS)
+  const inactivityTimer  = useRef(null)
+  const countdownTimer   = useRef(null)
 
   // ── Restore session on mount ─────────────────────────────────────────────
   useEffect(() => {
@@ -282,17 +289,72 @@ export function EditModeProvider({ children }) {
   // ── Show the login modal ──────────────────────────────────────────────────
   const requestAuth = useCallback((cb) => {
     if (isEditMode) { cb?.(); return }
+    // Session still alive — re-enter edit mode instantly, no login needed
+    if (currentUser) { setIsEditMode(true); cb?.(); return }
     setOnSuccess(() => cb ?? null)
     setShowModal(true)
-  }, [isEditMode])
+  }, [isEditMode, currentUser])
 
-  // ── Exit edit mode ────────────────────────────────────────────────────────
-  const lock = useCallback(async () => {
+  // ── Exit edit mode (keeps session + Firebase Auth token alive) ────────────
+  // User can click "Edit Site" again to instantly re-enter without re-auth.
+  const lock = useCallback(() => {
+    setIsEditMode(false)
+  }, [])
+
+  // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
+  const signOutFully = useCallback(async () => {
+    clearTimeout(inactivityTimer.current)
+    clearInterval(countdownTimer.current)
     setIsEditMode(false)
     setCurrentUser(null)
+    setInactivityWarning(false)
     localStorage.removeItem(STORAGE_KEY)
     try { await signOut(auth) } catch { /* ignore */ }
   }, [])
+
+  // ── Inactivity timer — 15 min no activity → warning → 60s → auto sign-out ─
+  const resetInactivity = useCallback(() => {
+    clearTimeout(inactivityTimer.current)
+    clearInterval(countdownTimer.current)
+    setInactivityWarning(false)
+    inactivityTimer.current = setTimeout(() => {
+      setInactivityWarning(true)
+      setWarnCountdown(WARN_SECS)
+      let secs = WARN_SECS
+      countdownTimer.current = setInterval(() => {
+        secs -= 1
+        setWarnCountdown(secs)
+        if (secs <= 0) {
+          clearInterval(countdownTimer.current)
+          signOutFully()
+        }
+      }, 1000)
+    }, INACTIVITY_MS)
+  }, [signOutFully])
+
+  // Start/stop inactivity tracking when a real session exists
+  useEffect(() => {
+    if (!currentUser) {
+      clearTimeout(inactivityTimer.current)
+      clearInterval(countdownTimer.current)
+      return
+    }
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart']
+    // Throttle to avoid hammering resetInactivity on every mouse move
+    let throttle = null
+    const handler = () => {
+      if (throttle) return
+      throttle = setTimeout(() => { throttle = null }, 2000)
+      resetInactivity()
+    }
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }))
+    resetInactivity() // start the initial timer
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler))
+      clearTimeout(inactivityTimer.current)
+      clearInterval(countdownTimer.current)
+    }
+  }, [currentUser, resetInactivity])
 
   const dismissModal = useCallback(() => {
     setShowModal(false)
@@ -321,11 +383,19 @@ export function EditModeProvider({ children }) {
       signInWithGoogle,
       sendMagicLink,
       lock,
+      signOutFully,
       dismissModal,
       recordSave,
     }}>
       {children}
       {showModal && <LoginModal />}
+      {inactivityWarning && (
+        <InactivityWarning
+          countdown={warnCountdown}
+          onStay={() => resetInactivity()}
+          onSignOut={signOutFully}
+        />
+      )}
     </EditModeContext.Provider>
   )
 }
@@ -535,6 +605,60 @@ const inputStyle = {
   background: '#fff',
   width: '100%',
   boxSizing: 'border-box',
+}
+
+// ── Inactivity Warning Modal ──────────────────────────────────────────────────
+function InactivityWarning({ countdown, onStay, onSignOut }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 999999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(17,30,28,0.7)', backdropFilter: 'blur(4px)',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <div style={{
+        background: '#F9F8F6', borderRadius: '1rem',
+        padding: '2rem 2.2rem', width: 340, maxWidth: '90vw',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
+        border: '1px solid rgba(23,47,45,0.12)',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>⏱</div>
+        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.3rem', color: '#172f2d', marginBottom: '0.5rem' }}>
+          Still there?
+        </div>
+        <p style={{ fontSize: '0.9rem', color: '#5a7a76', marginBottom: '1.4rem', lineHeight: 1.5 }}>
+          You'll be signed out automatically in{' '}
+          <strong style={{ color: countdown <= 10 ? '#c0392b' : '#172f2d' }}>{countdown}s</strong>{' '}
+          due to inactivity.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <button
+            onClick={onSignOut}
+            style={{
+              padding: '0.55rem 1.1rem', borderRadius: '0.5rem',
+              border: '1.5px solid #d0c9c0', background: 'transparent',
+              color: '#5a7a76', fontSize: '0.85rem', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            Sign out
+          </button>
+          <button
+            onClick={onStay}
+            style={{
+              padding: '0.55rem 1.4rem', borderRadius: '0.5rem',
+              border: 'none', background: '#224e4a',
+              color: '#fff', fontSize: '0.85rem', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            Stay signed in
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function GoogleIcon() {
