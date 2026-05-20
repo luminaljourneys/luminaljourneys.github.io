@@ -302,6 +302,19 @@ export function EditModeProvider({ children }) {
     setShowModal(true)
   }, [isEditMode, currentUser, hasFirebaseAuth])
 
+  // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
+  // MUST be declared before `lock` — lock's dependency array references it,
+  // and const declarations are in the TDZ until their initializer runs.
+  const signOutFully = useCallback(async () => {
+    clearTimeout(inactivityTimer.current)
+    clearInterval(countdownTimer.current)
+    setIsEditMode(false)
+    setCurrentUser(null)
+    setInactivityWarning(false)
+    localStorage.removeItem(STORAGE_KEY)
+    try { await signOut(auth) } catch { /* ignore */ }
+  }, [])
+
   // ── Exit edit mode ────────────────────────────────────────────────────────
   // Firebase Auth sessions (Google / magic link): keep session alive so the
   // editor can preview the site and resume without re-authenticating.
@@ -313,17 +326,6 @@ export function EditModeProvider({ children }) {
       signOutFully()         // admin/password: clean exit
     }
   }, [hasFirebaseAuth, signOutFully])
-
-  // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
-  const signOutFully = useCallback(async () => {
-    clearTimeout(inactivityTimer.current)
-    clearInterval(countdownTimer.current)
-    setIsEditMode(false)
-    setCurrentUser(null)
-    setInactivityWarning(false)
-    localStorage.removeItem(STORAGE_KEY)
-    try { await signOut(auth) } catch { /* ignore */ }
-  }, [])
 
   // ── Inactivity timer — 15 min no activity → warning → 60s → auto sign-out ─
   const resetInactivity = useCallback(() => {
