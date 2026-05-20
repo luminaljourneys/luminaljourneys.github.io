@@ -33,6 +33,7 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
+  onAuthStateChanged,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
@@ -67,34 +68,19 @@ export function EditModeProvider({ children }) {
 
   // ── Restore session on mount ─────────────────────────────────────────────
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const { expiry, user } = JSON.parse(raw)
-        if (Date.now() < expiry) {
-          setIsEditMode(true)
-          setCurrentUser(user ?? null)
-          return
-        } else {
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY)
-    }
-
-    // ── Complete magic-link sign-in if URL contains a link ─────────────────
+    // ── 1. Magic link ALWAYS takes priority — process before localStorage ───
+    // If we checked localStorage first, an existing admin session would
+    // early-return and the magic link would never be completed, leaving
+    // auth.currentUser null and all Firestore writes permission-denied.
     if (isSignInWithEmailLink(auth, window.location.href)) {
       let email = localStorage.getItem(MAGIC_EMAIL_KEY)
       if (!email) {
-        // Fallback: prompt in case they opened on a different device
         email = window.prompt('Please confirm your email to complete sign-in:')
       }
       if (email) {
         signInWithEmailLink(auth, email, window.location.href)
           .then(async (result) => {
             localStorage.removeItem(MAGIC_EMAIL_KEY)
-            // Clean the link params from the URL
             window.history.replaceState({}, '', window.location.pathname)
 
             const fbUser   = result.user
@@ -128,8 +114,40 @@ export function EditModeProvider({ children }) {
             localStorage.removeItem(MAGIC_EMAIL_KEY)
           })
       }
+      return  // don't restore stale localStorage session on top of fresh auth
+    }
+
+    // ── 2. Restore localStorage session (admin or previous Google/magic) ────
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const { expiry, user } = JSON.parse(raw)
+        if (Date.now() < expiry) {
+          setIsEditMode(true)
+          setCurrentUser(user ?? null)
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync Firebase Auth state → keeps auth.currentUser fresh for Firestore ─
+  // Without this, a page reload after Google/magic-link sign-in would show
+  // the user as logged in (via localStorage) but have no Firebase Auth token,
+  // causing every Firestore write to fail with permission-denied.
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        console.log('[EditMode] Firebase Auth restored:', fbUser.email)
+      } else {
+        console.log('[EditMode] Firebase Auth: no user (password session or signed out)')
+      }
+    })
+    return unsub
+  }, [])
 
   // ── Start a session (shared by all auth paths) ───────────────────────────
   const startSession = useCallback((user) => {
