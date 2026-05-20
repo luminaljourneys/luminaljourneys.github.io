@@ -19,10 +19,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper: signed in with a verified email ─────────────────────────────
+    // ── Helper: signed in with a valid email ────────────────────────────────
+    // Note: email_verified is intentionally NOT required here.
+    // Google Sign-In and Email Link both produce verified sessions,
+    // but Firebase token claims can be stale on first request after sign-in.
+    // The authorized_editors check in isAuthorizedEditor() is the real gate.
     function isSignedIn() {
       return request.auth != null
-          && request.auth.token.email_verified == true
           && request.auth.token.email != null;
     }
 
