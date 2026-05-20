@@ -207,30 +207,57 @@ export function EditModeProvider({ children }) {
     const trimmed = email.trim().toLowerCase()
     if (!trimmed) return { error: 'Please enter your email address.' }
 
+    // Block Gmail — those users must use Google Sign-In (also blocks googlemail.com)
+    const gmailDomains = ['gmail.com', 'googlemail.com']
+    const domain = trimmed.split('@')[1] ?? ''
+    if (gmailDomains.includes(domain)) {
+      return { error: 'Gmail accounts must use "Continue with Google" above.' }
+    }
+
+    // ── Rate limiting ────────────────────────────────────────────────────────
+    // Max 3 attempts per 10 minutes. Stored in localStorage per email.
+    const RL_KEY     = 'lj_rl_magic'
+    const RL_WINDOW  = 10 * 60 * 1000  // 10 minutes
+    const RL_MAX     = 3
+    const now        = Date.now()
+    let rl           = {}
+    try { rl = JSON.parse(localStorage.getItem(RL_KEY) ?? '{}') } catch { /* ignore */ }
+
+    const entry = rl[trimmed] ?? { count: 0, first: now }
+    if (now - entry.first > RL_WINDOW) {
+      // Window expired — reset
+      entry.count = 0
+      entry.first = now
+    }
+    if (entry.count >= RL_MAX) {
+      const wait = Math.ceil((RL_WINDOW - (now - entry.first)) / 60000)
+      return { error: `Too many attempts. Try again in ${wait} minute${wait !== 1 ? 's' : ''}.` }
+    }
+    entry.count += 1
+    rl[trimmed] = entry
+    try { localStorage.setItem(RL_KEY, JSON.stringify(rl)) } catch { /* ignore */ }
+    // ────────────────────────────────────────────────────────────────────────
+
     try {
-      // Check authorized list before sending — fail fast for unknown emails
-      const snap = await getDoc(doc(db, SITE_CONFIG_COLL, AUTHORIZED_EDITORS_DOC))
-      const authorized = snap.exists()
-        ? (snap.data().emails ?? []).filter(Boolean).map(e => e.trim().toLowerCase())
-        : []
-
-      if (!authorized.includes(trimmed)) {
-        return { error: `${email} is not authorized. Ask your admin to add you.` }
-      }
-
       const actionCodeSettings = {
-        url:              window.location.origin + window.location.pathname,
-        handleCodeInApp:  true,
+        url:             window.location.origin + window.location.pathname,
+        handleCodeInApp: true,
       }
 
       await sendSignInLinkToEmail(auth, trimmed, actionCodeSettings)
+
+      // Save email so completion works on same device without prompting
       localStorage.setItem(MAGIC_EMAIL_KEY, trimmed)
+
+      // Deliberately ambiguous — don't confirm whether email is on the list.
+      // The real authorization check happens when they complete sign-in.
       return { error: null }
     } catch (e) {
       console.error('[EditMode] Magic link send error:', e.code, e.message)
-      if (e.code === 'auth/invalid-email') return { error: 'Invalid email address.' }
-      if (e.code === 'auth/operation-not-allowed') return { error: 'Passwordless sign-in is not enabled. Enable "Email link" in Firebase Console → Auth → Sign-in method → Email/Password.' }
-      return { error: `Could not send link (${e.code ?? e.message}). Try again or contact your admin.` }
+      if (e.code === 'auth/invalid-email')          return { error: 'Invalid email address.' }
+      if (e.code === 'auth/too-many-requests')       return { error: 'Too many requests from this device. Try again later.' }
+      if (e.code === 'auth/operation-not-allowed')   return { error: 'Email link sign-in is not enabled. Contact your admin.' }
+      return { error: 'Could not send link. Try again or contact your admin.' }
     }
   }, [])
 
@@ -384,8 +411,8 @@ function LoginModal() {
           }}>
             <div style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>✉️</div>
             <p style={{ fontSize: '0.88rem', color: '#172f2d', margin: 0, lineHeight: 1.6 }}>
-              Check your inbox at <strong>{linkEmail}</strong>.<br />
-              Click the link to sign in — it expires in 1 hour.
+              If <strong>{linkEmail}</strong> is on the access list, you'll receive a sign-in link shortly.<br />
+              <span style={{ color: '#89a99e', fontSize: '0.8rem' }}>The link expires in 1 hour and works once.</span>
             </p>
             <button
               onClick={() => { setLinkSent(false); setLinkEmail('') }}

@@ -1,0 +1,108 @@
+rules_version = '2';
+/**
+ * firestore.rules — Luminal Journeys
+ *
+ * Security model:
+ *   - Public website content (content_edits, pages, form config, meta) → anyone can READ
+ *   - Writes to any content → must be a verified, authorized editor
+ *   - authorized_editors list → only readable by signed-in + verified users (not public)
+ *   - Intake submissions → anyone can CREATE (public form), only editors can READ/MANAGE
+ *   - Notes, publish history → editors only
+ *   - Everything else → deny
+ *
+ * "Authorized editor" = Firebase Auth user whose verified email is in
+ *   site_config/authorized_editors { emails: [...] }
+ *
+ * Deploy: firebase deploy --only firestore:rules
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: signed in with a verified email ─────────────────────────────
+    function isSignedIn() {
+      return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email != null;
+    }
+
+    // ── Helper: signed-in AND email is in the authorized_editors list ────────
+    // This check runs server-side on every write — cannot be bypassed from client.
+    function isAuthorizedEditor() {
+      return isSignedIn()
+          && exists(/databases/$(database)/documents/site_config/authorized_editors)
+          && request.auth.token.email in
+             get(/databases/$(database)/documents/site_config/authorized_editors).data.emails;
+    }
+
+    // ── site_config/meta ─────────────────────────────────────────────────────
+    // Public read: "Last saved by" is shown on the public site.
+    match /site_config/meta {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+
+    // ── site_config/authorized_editors ───────────────────────────────────────
+    // NOT publicly readable — requires sign-in + verified email.
+    // Prevents anonymous actors from enumerating who has editor access.
+    match /site_config/authorized_editors {
+      allow read:  if isSignedIn();
+      allow write: if isAuthorizedEditor();
+    }
+
+    // ── site_config/form_staging + form_production ───────────────────────────
+    // Intake form config is public (drives the public intake form).
+    match /site_config/form_staging {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+    match /site_config/form_production {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+
+    // ── Content edits (public website copy) ──────────────────────────────────
+    match /content_edits_staging/{docId} {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+    match /content_edits_production/{docId} {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+
+    // ── Dynamic pages ─────────────────────────────────────────────────────────
+    match /pages_staging/{docId} {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+    match /pages_production/{docId} {
+      allow read:  if true;
+      allow write: if isAuthorizedEditor();
+    }
+
+    // ── Publish history ───────────────────────────────────────────────────────
+    match /publish_history/{docId} {
+      allow read, write: if isAuthorizedEditor();
+    }
+
+    // ── Collaborative notes ───────────────────────────────────────────────────
+    match /page_notes/{docId} {
+      allow read, write: if isAuthorizedEditor();
+    }
+
+    // ── Intake form submissions ───────────────────────────────────────────────
+    // Anyone can submit the public intake form (create only).
+    // Only authorized editors can read, manage, or delete submissions.
+    match /intake_submissions/{docId} {
+      allow create:               if true;
+      allow read, update, delete: if isAuthorizedEditor();
+    }
+
+    // ── Default deny ──────────────────────────────────────────────────────────
+    // Any collection or document not explicitly listed above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
