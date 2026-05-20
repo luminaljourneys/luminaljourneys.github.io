@@ -102,6 +102,14 @@ service cloud.firestore {
       allow read, update, delete: if isAuthorizedEditor();
     }
 
+    // ── Editing locks (real-time collaborative presence) ─────────────────────
+    // Authorized editors can read all locks to see who is editing what.
+    // Any authorized editor can write/delete any lock (needed to release
+    // stale locks if original editor disconnects).
+    match /editing_locks/{lockId} {
+      allow read, write: if isAuthorizedEditor();
+    }
+
     // ── Default deny ──────────────────────────────────────────────────────────
     // Any collection or document not explicitly listed above is denied.
     match /{document=**} {

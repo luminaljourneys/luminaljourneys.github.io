@@ -34,3 +34,8 @@ export const AUTHORIZED_EDITORS_DOC = 'authorized_editors'
 
 // ── Collaborative notes ───────────────────────────────────────────────────────
 export const NOTES_COLL = 'page_notes'
+
+// ── Editing locks (real-time presence / conflict prevention) ──────────────────
+// One doc per contentKey. Auto-expires after LOCK_TTL_MS if editor disconnects.
+export const LOCKS_COLL  = 'editing_locks'
+export const LOCK_TTL_MS = 3 * 60 * 1000  // 3 minutes
