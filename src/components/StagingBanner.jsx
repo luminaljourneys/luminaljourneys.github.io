@@ -186,7 +186,7 @@ export default function StagingBanner() {
                   {currentUser.displayName[0].toUpperCase()}
                 </div>
               )}
-              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span data-testid="user-chip-name" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentUser.displayName}
               </span>
               <button

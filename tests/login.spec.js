@@ -74,7 +74,8 @@ test.describe('Password login', () => {
     await openLoginModal(page);
     await loginWithPassword(page);
     await expectEditMode(page);
-    await expect(page.getByText('Admin')).toBeVisible();
+    // User chip in StagingBanner shows the logged-in user's displayName
+    await expect(page.getByTestId('user-chip-name')).toHaveText('Admin');
   });
 
   test('wrong password shows error', async ({ page }) => {
