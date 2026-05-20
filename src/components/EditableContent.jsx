@@ -5,15 +5,9 @@
  * opens the EditPanel drawer on click.
  *
  * Collaborative locking: when another editor has this section open,
- * a "Pending by [Name]" overlay appears and clicking is blocked.
- *
- * Usage:
- *   <EditableContent
- *     contentKey="hero.tagline"
- *     fallback="Integrative Health · Private Practice"
- *     tag="span"
- *     style={{ color: '#bf8a3e' }}
- *   />
+ * a "Pending by [Name]" badge appears and clicking is blocked.
+ * The overlay is rendered INSIDE the Tag (not outside) to avoid
+ * invalid HTML nesting (e.g. <span> wrapping <h1>).
  */
 
 import { useState } from 'react'
@@ -38,19 +32,17 @@ export default function EditableContent({
 
   const isLockedByOther = !!lock && !isLockedByMe
 
-  // ── View mode — zero overhead, renders exactly like original ──────────────
+  // ── View mode — zero overhead ─────────────────────────────────────────────
   if (!isEditMode) {
     return <Tag className={className} style={style} {...rest}>{content}</Tag>
   }
 
-  // ── Open panel ────────────────────────────────────────────────────────────
   const handleOpen = () => {
-    if (isLockedByOther) return  // blocked — another editor has this section
+    if (isLockedByOther) return
     setPanelOpen(true)
     acquireLock()
   }
 
-  // ── Close panel ───────────────────────────────────────────────────────────
   const handleClose = () => {
     setPanelOpen(false)
     releaseLock()
@@ -61,40 +53,35 @@ export default function EditableContent({
     releaseLock()
   }
 
-  // ── Edit mode — dashed outline + pencil hint + lock overlay ───────────────
+  // ── Edit mode ─────────────────────────────────────────────────────────────
+  // The overlay is a child of Tag (not a wrapper around it) to keep valid HTML.
+  // Tag gets position:relative so the absolutely-positioned badge stays anchored.
   return (
     <>
-      {/* Wrapper gives us a relative positioning context for the lock overlay */}
-      <span
-        style={{ position: 'relative', display: 'inline' }}
-        className="ec-lock-wrapper"
+      <Tag
+        className={`${className ?? ''} ec-editable${isLockedByOther ? ' ec-locked' : ''}`.trim()}
+        style={{
+          ...style,
+          cursor:   isLockedByOther ? 'not-allowed' : 'pointer',
+          opacity:  isLockedByOther ? 0.65 : 1,
+          position: 'relative',   // anchors the lock badge
+        }}
+        title={isLockedByOther
+          ? `Being edited by ${lock.lockedBy?.displayName ?? 'another editor'}`
+          : 'Click to edit'}
+        onClick={handleOpen}
+        {...rest}
       >
-        <Tag
-          className={`${className ?? ''} ec-editable${isLockedByOther ? ' ec-locked' : ''}`.trim()}
-          style={{
-            ...style,
-            cursor: isLockedByOther ? 'not-allowed' : 'pointer',
-            opacity: isLockedByOther ? 0.6 : 1,
-          }}
-          title={isLockedByOther
-            ? `Being edited by ${lock.lockedBy?.displayName ?? 'another editor'}`
-            : 'Click to edit'}
-          onClick={handleOpen}
-          {...rest}
-        >
-          {!isLockedByOther && (
-            <span className="ec-edit-hint" aria-hidden="true">
-              <PencilIcon size={11} />
-            </span>
-          )}
-          {content}
-        </Tag>
-
-        {/* Lock overlay — shown when another editor has this section open */}
-        {isLockedByOther && (
-          <LockOverlay editorName={lock.lockedBy?.displayName ?? 'Another editor'} />
+        {!isLockedByOther && (
+          <span className="ec-edit-hint" aria-hidden="true">
+            <PencilIcon size={11} />
+          </span>
         )}
-      </span>
+        {content}
+        {isLockedByOther && (
+          <LockBadge name={lock.lockedBy?.displayName ?? 'Another editor'} />
+        )}
+      </Tag>
 
       {panelOpen && (
         <EditPanel
@@ -109,45 +96,35 @@ export default function EditableContent({
   )
 }
 
-// ── Lock Overlay ──────────────────────────────────────────────────────────────
-function LockOverlay({ editorName }) {
+// ── Lock Badge — floats above the element, anchored via position:absolute ─────
+function LockBadge({ name }) {
   return (
     <span
       aria-live="polite"
       style={{
-        position:   'absolute',
-        top:        0,
-        left:       0,
-        right:      0,
-        bottom:     0,
-        zIndex:     9000,
-        display:    'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
+        position:      'absolute',
+        top:           '-1.6rem',
+        left:          0,
+        zIndex:        9000,
+        display:       'inline-flex',
+        alignItems:    'center',
+        gap:           '0.3rem',
+        background:    'rgba(191,138,62,0.93)',
+        color:         '#fff',
+        fontSize:      '0.68rem',
+        fontFamily:    "'DM Mono', monospace",
+        fontWeight:    600,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+        padding:       '0.22rem 0.5rem',
+        borderRadius:  '0.35rem',
+        whiteSpace:    'nowrap',
+        boxShadow:     '0 2px 8px rgba(0,0,0,0.18)',
         pointerEvents: 'none',
       }}
     >
-      <span style={{
-        display:        'inline-flex',
-        alignItems:     'center',
-        gap:            '0.35rem',
-        background:     'rgba(191, 138, 62, 0.92)',  // amber
-        color:          '#fff',
-        fontSize:       '0.7rem',
-        fontFamily:     "'DM Mono', monospace",
-        fontWeight:     600,
-        letterSpacing:  '0.04em',
-        textTransform:  'uppercase',
-        padding:        '0.25rem 0.55rem',
-        borderRadius:   '0.4rem',
-        whiteSpace:     'nowrap',
-        boxShadow:      '0 2px 8px rgba(0,0,0,0.18)',
-        backdropFilter: 'blur(4px)',
-        marginTop:      '-1.5rem',  // float above the element
-      }}>
-        <span style={{ fontSize: '0.65rem' }}>✏</span>
-        Pending · {editorName}
-      </span>
+      <span style={{ fontSize: '0.6rem' }}>✏</span>
+      Pending · {name}
     </span>
   )
 }

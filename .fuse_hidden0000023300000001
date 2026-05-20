@@ -1,0 +1,26 @@
+[debug] [2026-05-20T10:55:12.592Z] ----------------------------------------------------------------------
+[debug] [2026-05-20T10:55:12.593Z] Command:       /usr/bin/node /sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/.bin/firebase deploy --only firestore:rules
+[debug] [2026-05-20T10:55:12.593Z] CLI Version:   15.18.0
+[debug] [2026-05-20T10:55:12.593Z] Platform:      linux
+[debug] [2026-05-20T10:55:12.593Z] Node Version:  v22.22.0
+[debug] [2026-05-20T10:55:12.594Z] Time:          Wed May 20 2026 10:55:12 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-05-20T10:55:12.594Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-20T10:55:12.595Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-05-20T10:55:13.189Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-20T10:55:13.203Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 403
+[debug] [2026-05-20T10:55:13.203Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json "Connection blocked by network allowlist"
+[warn] ⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-05-20T10:55:13.203Z] Failed to fetch MOTD FirebaseError: Unable to parse JSON: SyntaxError: Unexpected token 'C', "Connection"... is not valid JSON
+[debug] [2026-05-20T10:55:13.207Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
+    at GoogleAuth.getApplicationDefaultAsync (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/google-auth-library/build/src/auth/googleauth.js:287:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async GoogleAuth._GoogleAuth_determineClient (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/google-auth-library/build/src/auth/googleauth.js:834:32)
+    at async GoogleAuth.getClient (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/google-auth-library/build/src/auth/googleauth.js:698:20)
+    at async GoogleAuth.getAccessToken (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/google-auth-library/build/src/auth/googleauth.js:722:24)
+    at async autoAuth (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/requireAuth.js:28:19)
+    at async requireAuth (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/requireAuth.js:90:20)
+    at async requirePermissions (/sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/requirePermissions.js:17:5)
+    at async /sessions/bold-serene-fermi/.npm/_npx/7750544ccf494d8b/node_modules/firebase-tools/lib/command.js:271:17
+[error] 
+[error] Error: Failed to authenticate, have you run firebase login?
