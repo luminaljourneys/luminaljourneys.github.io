@@ -773,12 +773,150 @@ function FormBuilderTab() {
 }
 
 // ─── Tab: Pages ───────────────────────────────────────────────────────────────
+const EMPTY_PAGE = { title: "", subheading: "", body: "", showInNav: true };
+
+function PageRow({ page, idx, isLast, onReorder, onDelete, onUpdate, showToast }) {
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState(null);
+  const [saving,  setSaving]  = useState(false);
+
+  const startEdit = () => {
+    setDraft({ title: page.title, subheading: page.subheading || "", body: page.body || "", showInNav: page.showInNav ?? true });
+    setEditing(true);
+  };
+  const cancelEdit = () => { setEditing(false); setDraft(null); };
+
+  const saveEdit = async () => {
+    if (!draft.title.trim()) return;
+    setSaving(true);
+    await onUpdate(page.id, draft);
+    setSaving(false);
+    setEditing(false);
+    setDraft(null);
+    showToast(`"${draft.title}" saved to Firebase`);
+  };
+
+  const wordCount = (page.body || "").trim().split(/\s+/).filter(Boolean).length;
+  const bodyPreview = (page.body || "").trim().slice(0, 120) + ((page.body || "").length > 120 ? "…" : "");
+
+  return (
+    <div style={{ borderBottom: !isLast ? "1px solid rgba(23,47,45,0.08)" : "none" }}>
+
+      {/* ── View row ─────────────────────────────────────────────────────────── */}
+      {!editing && (
+        <div style={{ padding: "1.1rem 1.3rem", display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+          {/* Reorder */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem", paddingTop: "0.2rem", flexShrink: 0 }}>
+            <button onClick={() => onReorder(page.id, "up")} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? "rgba(137,169,158,0.3)" : "#89a99e", cursor: idx === 0 ? "default" : "pointer", fontSize: "0.75rem", padding: "0.1rem" }}>▲</button>
+            <button onClick={() => onReorder(page.id, "down")} disabled={isLast} style={{ background: "none", border: "none", color: isLast ? "rgba(137,169,158,0.3)" : "#89a99e", cursor: isLast ? "default" : "pointer", fontSize: "0.75rem", padding: "0.1rem" }}>▼</button>
+          </div>
+
+          {/* Content */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Title row */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#172f2d", fontFamily: "'DM Sans', sans-serif" }}>{page.title}</span>
+              <span style={{ ...S.labelMono, fontSize: "0.68rem", color: "#89a99e" }}>
+                luminaljourneys.com/<strong>{page.id}</strong>
+              </span>
+              {page.showInNav
+                ? <span style={{ background: "rgba(95,158,160,0.12)", color: "#2E7D7F", fontSize: "0.65rem", padding: "0.12rem 0.45rem", borderRadius: "0.25rem", fontFamily: "var(--font-mono)" }}>in nav</span>
+                : <span style={{ background: "rgba(137,169,158,0.1)", color: "#89a99e", fontSize: "0.65rem", padding: "0.12rem 0.45rem", borderRadius: "0.25rem", fontFamily: "var(--font-mono)" }}>hidden from nav</span>
+              }
+              {wordCount > 0 && (
+                <span style={{ ...S.labelMono, fontSize: "0.65rem", color: "#89a99e" }}>{wordCount} words</span>
+              )}
+            </div>
+
+            {/* Subheading */}
+            {page.subheading && (
+              <div style={{ fontSize: "0.82rem", color: "#3a5450", fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", marginBottom: "0.3rem" }}>
+                {page.subheading}
+              </div>
+            )}
+
+            {/* Body preview */}
+            {bodyPreview ? (
+              <div style={{ fontSize: "0.78rem", color: "#89a99e", fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}>
+                {bodyPreview}
+              </div>
+            ) : (
+              <div style={{ ...S.labelMono, fontSize: "0.68rem", color: "rgba(137,169,158,0.6)" }}>
+                No body content yet — click Edit to add
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+            <button onClick={startEdit} style={S.btn("ghost")}>Edit</button>
+            <button onClick={() => navigate("/" + page.id)} style={S.btn("ghost")}>View ↗</button>
+            <button onClick={() => onDelete(page)} style={S.btn("danger")}>Delete</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit form ────────────────────────────────────────────────────────── */}
+      {editing && draft && (
+        <div style={{ padding: "1.3rem", background: "rgba(23,47,45,0.025)", borderLeft: "3px solid #172f2d" }}>
+          <div style={{ ...S.labelMono, marginBottom: "1rem", color: "#172f2d" }}>
+            Editing: <strong>{page.title}</strong>
+            <span style={{ color: "#89a99e", fontWeight: 400, marginLeft: "0.5rem" }}>luminaljourneys.com/{page.id}</span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+            <div>
+              <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Page Title *</label>
+              <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} style={S.input} />
+              <div style={{ ...S.labelMono, fontSize: "0.62rem", color: "#89a99e", marginTop: "0.25rem" }}>
+                Note: title changes don't change the URL slug
+              </div>
+            </div>
+            <div>
+              <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Subheading</label>
+              <input value={draft.subheading} onChange={e => setDraft(d => ({ ...d, subheading: e.target.value }))} placeholder="Short tagline shown under the heading" style={S.input} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "0.85rem" }}>
+            <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Body Content</label>
+            <textarea
+              value={draft.body}
+              onChange={e => setDraft(d => ({ ...d, body: e.target.value }))}
+              placeholder="Main page content — supports plain text paragraphs…"
+              rows={6}
+              style={{ ...S.input, resize: "vertical", lineHeight: 1.7 }}
+            />
+            <div style={{ ...S.labelMono, fontSize: "0.62rem", color: "#89a99e", marginTop: "0.25rem" }}>
+              {draft.body.trim().split(/\s+/).filter(Boolean).length} words
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: "#3a5450", cursor: "pointer" }}>
+              <input type="checkbox" checked={draft.showInNav} onChange={e => setDraft(d => ({ ...d, showInNav: e.target.checked }))} />
+              Show in navigation
+            </label>
+            <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
+              <button onClick={cancelEdit} style={S.btn("ghost")}>Cancel</button>
+              <button onClick={saveEdit} disabled={!draft.title.trim() || saving}
+                style={{ ...S.btn("primary"), opacity: draft.title.trim() ? 1 : 0.5 }}>
+                {saving ? "Saving…" : "Save to Firebase ✦"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PagesTab() {
-  const { pages, loading, addPage, deletePage, reorderPage } = useSitePages();
-  const [newPage, setNewPage] = useState({ title: "", subheading: "", body: "", showInNav: true });
-  const [adding, setAdding]   = useState(false);
+  const { pages, loading, addPage, updatePage, deletePage, reorderPage } = useSitePages();
+  const [newPage, setNewPage]   = useState(EMPTY_PAGE);
+  const [adding, setAdding]     = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [toast, setToast]     = useState(null);
+  const [toast, setToast]       = useState(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
@@ -786,7 +924,7 @@ function PagesTab() {
     if (!newPage.title.trim()) return;
     setAdding(true);
     const p = await addPage(newPage);
-    setNewPage({ title: "", subheading: "", body: "", showInNav: true });
+    setNewPage(EMPTY_PAGE);
     setShowForm(false);
     setAdding(false);
     showToast(`Page "${p.title}" created`);
@@ -811,49 +949,52 @@ function PagesTab() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem" }}>
         <div>
           <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "1.2rem", color: "#172f2d" }}>Dynamic Pages</div>
-          <div style={{ ...S.labelMono, marginTop: "0.2rem" }}>Pages are accessible at luminaljourneys.com/{"{slug}"}</div>
+          <div style={{ ...S.labelMono, marginTop: "0.2rem" }}>
+            {sorted.length} page{sorted.length !== 1 ? "s" : ""} · accessible at luminaljourneys.com/{"{slug}"}
+          </div>
         </div>
         <button onClick={() => setShowForm(v => !v)} style={S.btn("primary")}>
           {showForm ? "Cancel" : "+ New Page"}
         </button>
       </div>
 
-      {/* Add page form */}
+      {/* ── New page form ──────────────────────────────────────────────────────── */}
       {showForm && (
-        <div style={{ ...S.card, padding: "1.4rem", marginBottom: "1.5rem" }}>
-          <div style={{ ...S.labelMono, marginBottom: "1rem" }}>New Page</div>
-          <div style={{ display: "grid", gap: "0.75rem" }}>
+        <div style={{ ...S.card, padding: "1.4rem", marginBottom: "1.5rem", borderLeft: "3px solid #bf8a3e" }}>
+          <div style={{ ...S.labelMono, marginBottom: "1rem", color: "#bf8a3e" }}>New Page</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
             <div>
               <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Page Title * (becomes URL slug)</label>
               <input value={newPage.title} onChange={e => setNewPage(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Services" style={S.input} />
+              {newPage.title && (
+                <div style={{ ...S.labelMono, fontSize: "0.68rem", color: "#bf8a3e", marginTop: "0.3rem" }}>
+                  URL: /{newPage.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}
+                </div>
+              )}
             </div>
             <div>
               <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Subheading</label>
               <input value={newPage.subheading} onChange={e => setNewPage(p => ({ ...p, subheading: e.target.value }))} placeholder="Short tagline under the heading" style={S.input} />
             </div>
-            <div>
-              <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Body Content</label>
-              <textarea value={newPage.body} onChange={e => setNewPage(p => ({ ...p, body: e.target.value }))} placeholder="Main page content…" rows={5} style={{ ...S.input, resize: "vertical" }} />
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: "#3a5450", cursor: "pointer" }}>
-                <input type="checkbox" checked={newPage.showInNav} onChange={e => setNewPage(p => ({ ...p, showInNav: e.target.checked }))} />
-                Show in navigation
-              </label>
-              <button onClick={handleAdd} disabled={!newPage.title.trim() || adding} style={{ ...S.btn("primary"), marginLeft: "auto", opacity: newPage.title.trim() ? 1 : 0.5 }}>
-                {adding ? "Creating…" : "Create Page"}
-              </button>
-            </div>
-            {newPage.title && (
-              <div style={{ ...S.labelMono, fontSize: "0.68rem", color: "#bf8a3e" }}>
-                URL: /{ newPage.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") }
-              </div>
-            )}
+          </div>
+          <div style={{ marginBottom: "0.75rem" }}>
+            <label style={{ ...S.labelMono, fontSize: "0.65rem", display: "block", marginBottom: "0.3rem" }}>Body Content</label>
+            <textarea value={newPage.body} onChange={e => setNewPage(p => ({ ...p, body: e.target.value }))} placeholder="Main page content…" rows={5} style={{ ...S.input, resize: "vertical" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", color: "#3a5450", cursor: "pointer" }}>
+              <input type="checkbox" checked={newPage.showInNav} onChange={e => setNewPage(p => ({ ...p, showInNav: e.target.checked }))} />
+              Show in navigation
+            </label>
+            <button onClick={handleAdd} disabled={!newPage.title.trim() || adding}
+              style={{ ...S.btn("primary"), marginLeft: "auto", opacity: newPage.title.trim() ? 1 : 0.5 }}>
+              {adding ? "Creating…" : "Create Page"}
+            </button>
           </div>
         </div>
       )}
 
-      {/* Pages list */}
+      {/* ── Pages list ────────────────────────────────────────────────────────── */}
       {loading && <div style={{ color: "#89a99e", fontFamily: "var(--font-mono)", padding: "1rem 0" }}>Loading pages…</div>}
 
       {!loading && sorted.length === 0 && !showForm && (
@@ -865,24 +1006,16 @@ function PagesTab() {
       {!loading && sorted.length > 0 && (
         <div style={S.card}>
           {sorted.map((page, idx) => (
-            <div key={page.id} style={{ padding: "1rem 1.3rem", borderBottom: idx < sorted.length - 1 ? "1px solid rgba(23,47,45,0.08)" : "none", display: "flex", alignItems: "center", gap: "1rem" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-                <button onClick={() => reorderPage(page.id, "up")} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? "rgba(137,169,158,0.3)" : "#89a99e", cursor: idx === 0 ? "default" : "pointer", fontSize: "0.75rem", padding: "0.1rem" }}>▲</button>
-                <button onClick={() => reorderPage(page.id, "down")} disabled={idx === sorted.length - 1} style={{ background: "none", border: "none", color: idx === sorted.length - 1 ? "rgba(137,169,158,0.3)" : "#89a99e", cursor: idx === sorted.length - 1 ? "default" : "pointer", fontSize: "0.75rem", padding: "0.1rem" }}>▼</button>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.2rem" }}>
-                  <span style={{ fontWeight: 500, fontSize: "0.92rem", color: "#172f2d", fontFamily: "'DM Sans', sans-serif" }}>{page.title}</span>
-                  <span style={{ ...S.labelMono, fontSize: "0.68rem", color: "#89a99e" }}>/{page.id}</span>
-                  {page.showInNav && <span style={{ background: "rgba(95,158,160,0.12)", color: "#2E7D7F", fontSize: "0.65rem", padding: "0.12rem 0.45rem", borderRadius: "0.25rem", fontFamily: "var(--font-mono)" }}>in nav</span>}
-                </div>
-                {page.subheading && <div style={{ fontSize: "0.78rem", color: "#89a99e", fontFamily: "'DM Sans', sans-serif" }}>{page.subheading}</div>}
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button onClick={() => navigate("/" + page.id)} style={S.btn("ghost")}>View ↗</button>
-                <button onClick={() => handleDelete(page)} style={S.btn("danger")}>Delete</button>
-              </div>
-            </div>
+            <PageRow
+              key={page.id}
+              page={page}
+              idx={idx}
+              isLast={idx === sorted.length - 1}
+              onReorder={reorderPage}
+              onDelete={handleDelete}
+              onUpdate={updatePage}
+              showToast={showToast}
+            />
           ))}
         </div>
       )}

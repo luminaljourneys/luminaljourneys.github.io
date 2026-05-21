@@ -32,6 +32,9 @@ export default defineConfig({
     // Screenshot only on failure
     screenshot: 'only-on-failure',
 
+    // Video: record every test — viewable in the HTML report after `make qa-report`
+    video: 'on',
+
     // Global timeout per action (click, fill, etc.)
     actionTimeout: 5_000,
 
