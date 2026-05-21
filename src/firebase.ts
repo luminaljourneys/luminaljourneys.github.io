@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAnalytics } from 'firebase/analytics'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -15,6 +15,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 export const analytics = getAnalytics(app)
-export const db = getFirestore(app)
+
+// In development, force REST-based transport (long polling) instead of
+// WebChannel (gRPC streaming). This lets Playwright intercept Firestore
+// requests at the network layer — WebChannel responses are too complex to
+// mock correctly. Has no effect on production (PROD uses WebChannel).
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: import.meta.env.DEV,
+})
+
 export const auth = getAuth(app)
 export default app
