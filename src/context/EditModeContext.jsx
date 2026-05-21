@@ -49,6 +49,16 @@ const SESSION_MS       = 30 * 24 * 60 * 60 * 1000 // 30 days
 const INACTIVITY_MS    = 15 * 60 * 1000            // 15 minutes
 const WARN_SECS        = 60                         // countdown seconds before auto sign-out
 
+// ── Display name lookup for magic-link editors ────────────────────────────────
+// Keyed by lowercase email. Falls back to the part before @ if not listed.
+const EDITOR_NAMES = {
+  'hi@keeya.nl':                'Keeya',
+  'drwangjones@gmail.com':      'Tie',
+  'cullensarahbetty@gmail.com': 'Sarah',
+  'dpendragon@pacbell.net':     'Diane',
+  'wouter@keijser.com':         'Wouter',
+}
+
 const EditModeContext = createContext({
   isEditMode:       false,
   currentUser:      null,
@@ -107,9 +117,9 @@ export function EditModeProvider({ children }) {
             }
 
             const user = {
-              displayName: fbUser.displayName || rawEmail.split('@')[0],
+              displayName: EDITOR_NAMES[rawEmail] ?? rawEmail.split('@')[0],
               email:       fbUser.email || email,
-              photoURL:    fbUser.photoURL || null,
+              photoURL:    null,
             }
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
               expiry: Date.now() + SESSION_MS,
@@ -238,13 +248,6 @@ export function EditModeProvider({ children }) {
   const sendMagicLink = useCallback(async (email) => {
     const trimmed = email.trim().toLowerCase()
     if (!trimmed) return { error: 'Please enter your email address.' }
-
-    // Block Gmail — those users must use Google Sign-In (also blocks googlemail.com)
-    const gmailDomains = ['gmail.com', 'googlemail.com']
-    const domain = trimmed.split('@')[1] ?? ''
-    if (gmailDomains.includes(domain)) {
-      return { error: 'Gmail accounts must use "Continue with Google" above.' }
-    }
 
     // ── Rate limiting ────────────────────────────────────────────────────────
     // Max 3 attempts per 10 minutes. Stored in localStorage per email.
@@ -421,39 +424,31 @@ export const useEditMode = () => useContext(EditModeContext)
 
 // ── Login Modal ───────────────────────────────────────────────────────────────
 function LoginModal() {
-  const { unlock, signInWithGoogle, sendMagicLink, dismissModal } = useEditMode()
+  const { unlock, sendMagicLink, dismissModal } = useEditMode()
 
   const [username,    setUsername]    = useState('')
   const [password,    setPassword]    = useState('')
+  const [pwError,     setPwError]     = useState('')
   const [linkEmail,   setLinkEmail]   = useState('')
-  const [error,       setError]       = useState('')
-  const [loading,     setLoading]     = useState(false)
+  const [linkError,   setLinkError]   = useState('')
   const [linkSent,    setLinkSent]    = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
 
   const handlePassword = (e) => {
     e.preventDefault()
-    setError('')
+    setPwError('')
     const ok = unlock(username, password)
-    if (!ok) setError('Incorrect credentials.')
-  }
-
-  const handleGoogle = async () => {
-    setLoading(true)
-    setError('')
-    const { error: err } = await signInWithGoogle()
-    setLoading(false)
-    if (err) setError(err)
+    if (!ok) setPwError('Incorrect credentials.')
   }
 
   const handleMagicLink = async (e) => {
     e.preventDefault()
     setLinkLoading(true)
-    setError('')
+    setLinkError('')
     const { error: err } = await sendMagicLink(linkEmail)
     setLinkLoading(false)
     if (err) {
-      setError(err)
+      setLinkError(err)
     } else {
       setLinkSent(true)
     }
@@ -490,29 +485,7 @@ function LoginModal() {
           Sign in to edit content on this page.
         </p>
 
-        {/* ── 1. Google Sign-In ── */}
-        <button
-          onClick={handleGoogle}
-          disabled={loading}
-          style={{
-            width: '100%', padding: '0.7rem 1rem',
-            border: '1.5px solid rgba(23,47,45,0.2)',
-            borderRadius: '0.6rem', background: '#fff',
-            cursor: loading ? 'wait' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem',
-            fontSize: '0.9rem', fontWeight: 500, color: '#172f2d',
-            fontFamily: "'DM Sans', sans-serif",
-            transition: 'border-color 0.15s',
-            marginBottom: '1.2rem',
-          }}
-        >
-          <GoogleIcon />
-          {loading ? 'Signing in…' : 'Continue with Google'}
-        </button>
-
-        <Divider />
-
-        {/* ── 2. Email magic link ── */}
+        {/* ── 1. Email magic link ── */}
         {linkSent ? (
           <div style={{
             background: 'rgba(44,95,74,0.08)', borderRadius: '0.6rem',
@@ -562,6 +535,9 @@ function LoginModal() {
                 {linkLoading ? '…' : 'Send link'}
               </button>
             </div>
+            {linkError && (
+              <p style={{ fontSize: '0.8rem', color: '#C4604A', margin: '0.5rem 0 0' }}>{linkError}</p>
+            )}
           </form>
         )}
 
@@ -584,8 +560,8 @@ function LoginModal() {
             autoComplete="current-password"
             style={inputStyle}
           />
-          {error && (
-            <p style={{ fontSize: '0.8rem', color: '#C4604A', margin: 0 }}>{error}</p>
+          {pwError && (
+            <p style={{ fontSize: '0.8rem', color: '#C4604A', margin: 0 }}>{pwError}</p>
           )}
           <button type="submit" style={{
             background: '#172f2d', color: '#fff', border: 'none',
@@ -678,13 +654,3 @@ function InactivityWarning({ countdown, onStay, onSignOut }) {
   )
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-      <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-    </svg>
-  )
-}
