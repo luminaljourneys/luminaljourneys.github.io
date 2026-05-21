@@ -44,7 +44,8 @@ test.describe('Login modal — UI', () => {
   test('modal opens when Edit Site is clicked', async ({ page }) => {
     await openLoginModal(page);
     await expect(page.getByRole('heading', { name: 'Editor Access' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible();
+    // Google Sign-In is intentionally removed — magic link + password only
+    await expect(page.getByRole('button', { name: /continue with google/i })).not.toBeVisible();
     await expect(page.getByText(/sign in with email link/i)).toBeVisible();
     await expect(page.getByPlaceholder('Username')).toBeVisible();
     await expect(page.getByPlaceholder('Password')).toBeVisible();
@@ -146,19 +147,20 @@ test.describe('Email magic link — passwordless', () => {
     await expect(sendBtn).toBeDisabled();
   });
 
-  test('Gmail address is blocked with redirect message', async ({ page }) => {
+  test('Gmail address is accepted (Google Sign-In removed, magic link works for all)', async ({ page }) => {
     await openLoginModal(page);
     await page.getByPlaceholder('your@email.com').fill('someone@gmail.com');
     await page.getByRole('button', { name: /send link/i }).click();
-    await expect(page.getByText(/gmail accounts must use/i)).toBeVisible();
+    // Gmail block removed — should show success state, not an error
+    await expect(page.getByText(/access list/i)).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Editor Access')).toBeVisible();
   });
 
-  test('googlemail.com is also blocked', async ({ page }) => {
+  test('googlemail.com is also accepted via magic link', async ({ page }) => {
     await openLoginModal(page);
     await page.getByPlaceholder('your@email.com').fill('someone@googlemail.com');
     await page.getByRole('button', { name: /send link/i }).click();
-    await expect(page.getByText(/gmail accounts must use/i)).toBeVisible();
+    await expect(page.getByText(/access list/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('valid non-Gmail email shows check-inbox success state', async ({ page }) => {
@@ -204,44 +206,15 @@ test.describe('Email magic link — passwordless', () => {
 
 });
 
-// ── Google Sign-In (mocked) ───────────────────────────────────────────────────
+// ── Google Sign-In — removed ──────────────────────────────────────────────────
+// Google Sign-In was removed from the UI. Magic link works for all email
+// addresses including Gmail. These tests are kept as skipped documentation.
 
-test.describe('Google Sign-In — mocked', () => {
+test.describe('Google Sign-In — removed', () => {
 
-  test('Google button shows "Signing in…" while loading', async ({ page }) => {
+  test.skip('Google button is not present in the modal', async ({ page }) => {
     await openLoginModal(page);
-    await page.getByRole('button', { name: /continue with google/i }).click();
-    await expect(page.getByRole('button', { name: /signing in/i })).toBeVisible({ timeout: 2000 });
-  });
-
-  test('popup-closed returns to modal silently (no error text)', async ({ page }) => {
-    // Intercept window.open before Firebase fires so popup closes immediately,
-    // giving Firebase a clean popup-closed signal without real network calls.
-    await page.addInitScript(() => {
-      const _open = window.open.bind(window);
-      window.open = (...args) => {
-        const popup = _open(...args);
-        if (popup) setTimeout(() => { try { popup.close(); } catch { /* ignore */ } }, 80);
-        return popup;
-      };
-    });
-    await openLoginModal(page);
-    await page.getByRole('button', { name: /continue with google/i }).click();
-    // Modal must stay open — sign-in did not complete
-    await expect(page.getByText('Editor Access')).toBeVisible({ timeout: 6000 });
-    // Must not have entered edit mode
-    await expect(page.getByText('Exit Edit Mode')).not.toBeVisible({ timeout: 2000 });
-  });
-
-  test('null email in editors list does not crash', async ({ page }) => {
-    await page.addInitScript(() => { window.__TEST_NULL_EMAIL_SCENARIO__ = true; });
-    await mockFirebase(page);
-    await page.goto('/');
-    await waitForApp(page);
-    const errors = [];
-    page.on('pageerror', err => errors.push(err.message));
-    await page.waitForTimeout(1000);
-    expect(errors.filter(e => e.includes('Cannot read properties of null'))).toHaveLength(0);
+    await expect(page.getByRole('button', { name: /continue with google/i })).not.toBeVisible();
   });
 
 });

@@ -15,6 +15,9 @@ import { navigate } from "../App.jsx";
 import { useFormConfig } from "../hooks/useFormConfig.js";
 import { useEditMode } from "../context/EditModeContext.jsx";
 import NoteMarker from "../components/NoteMarker.jsx";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+import { ENV } from "../lib/collections";
 
 // ─── Field type metadata ───────────────────────────────────────────────────────
 const FIELD_TYPE_META = {
@@ -638,6 +641,8 @@ export default function IntakePage() {
 
   const [step, setStep]           = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [focused, setFocused]     = useState(null);
   const [form, setForm]           = useState({});
 
@@ -649,6 +654,25 @@ export default function IntakePage() {
   const [toast,          setToast]          = useState(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await addDoc(collection(db, `intake_submissions`), {
+        ...form,
+        env:         ENV,          // "staging" or "production" — for filtering
+        submittedAt: serverTimestamp(),
+        status:      "New",
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("[IntakePage] Submission failed:", err);
+      setSubmitError("Something went wrong saving your form. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const closeAddPanel = () => { setShowAddPanel(false); setAddAfterField(null); setAddPanelAnchor(null); };
 
@@ -884,7 +908,21 @@ export default function IntakePage() {
             : <div />}
           {!isConfirm
             ? <button data-testid="btn-continue" onClick={() => canAdvance && setStep(s => s + 1)} disabled={!canAdvance} style={{ background: canAdvance ? "var(--color-primary)" : "rgba(23,47,45,0.2)", color: canAdvance ? "#fff" : "#89a99e", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: canAdvance ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, transition: "all 0.2s" }}>Continue →</button>
-            : <button data-testid="btn-submit" onClick={() => setSubmitted(true)} style={{ background: "#bf8a3e", color: "#F9F8F6", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600 }}>Submit Intake ✦</button>}
+            : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
+                {submitError && (
+                  <div style={{ fontSize: "0.82rem", color: "#C4604A", fontFamily: "'DM Sans', sans-serif" }}>{submitError}</div>
+                )}
+                <button
+                  data-testid="btn-submit"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  style={{ background: "#bf8a3e", color: "#F9F8F6", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: submitting ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, opacity: submitting ? 0.7 : 1 }}
+                >
+                  {submitting ? "Submitting…" : "Submit Intake ✦"}
+                </button>
+              </div>
+            )}
         </div>
       </div>
 
