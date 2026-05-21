@@ -142,9 +142,20 @@ export async function mockFirebase(page) {
       return;
     }
 
-    // writes — succeed silently
+    // writes — return a valid Firestore document shape so addDoc/setDoc resolve
     if (['POST', 'PATCH', 'DELETE'].includes(method)) {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      // Extract a plausible collection name from the URL for the mock name field
+      const seg = url.split('/documents/')[1]?.split('?')[0] ?? 'mock-collection/mock-doc';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: `projects/lj/databases/(default)/documents/${seg}`,
+          fields: {},
+          createTime: new Date().toISOString(),
+          updateTime: new Date().toISOString(),
+        }),
+      });
       return;
     }
 

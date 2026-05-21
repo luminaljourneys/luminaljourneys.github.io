@@ -50,7 +50,14 @@ async function setupPage(page) {
   const captured = { payload: null };
 
   if (!IS_LIVE) {
-    // Intercept the intake_submissions addDoc POST and capture payload
+    // Register broad mock FIRST, then the specific interceptor.
+    // Playwright routes are LIFO — the last-registered route wins on a URL match,
+    // so the intake_submissions interceptor below will take priority over the
+    // generic Firestore write handler inside mockFirebase.
+    await mockFirebase(page);
+
+    // Specific interceptor: capture intake_submissions payload and return a
+    // proper Firestore document so addDoc resolves and setSubmitted(true) fires.
     await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
       if (route.request().method() === 'POST') {
         try {
@@ -64,7 +71,7 @@ async function setupPage(page) {
         updateTime: new Date().toISOString(),
       })});
     });
-    await mockFirebase(page);
+
     await page.goto('/intake');
   } else {
     await page.goto('https://staging.luminaljourneys.com/intake');
@@ -226,12 +233,18 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('submit button shows "Submitting…" state while saving', async ({ page }) => {
+    // mockFirebase first, then the delay route — LIFO means delay route wins
+    await mockFirebase(page);
     // Delay the Firestore intake write so we can catch the loading state
     await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
       await new Promise(r => setTimeout(r, 600));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        name: 'projects/luminaljourneys/databases/(default)/documents/intake_submissions/mock-doc-id',
+        fields: {},
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+      }) });
     });
-    await mockFirebase(page);
     await page.goto('/intake');
     await waitForApp(page);
 
@@ -255,10 +268,11 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('network error shows inline error message — does not crash', async ({ page }) => {
+    // mockFirebase first, then the 503 route — LIFO means 503 route wins
+    await mockFirebase(page);
     await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
       await route.fulfill({ status: 503, body: 'Service Unavailable' });
     });
-    await mockFirebase(page);
     await page.goto('/intake');
     await waitForApp(page);
 
