@@ -659,12 +659,25 @@ export default function IntakePage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await addDoc(collection(db, `intake_submissions`), {
-        ...form,
-        env:         ENV,          // "staging" or "production" — for filtering
-        submittedAt: serverTimestamp(),
-        status:      "New",
-      });
+      // ── Playwright test hook ──────────────────────────────────────────────
+      // In mocked E2E tests, window.__pw_intake_result is set via addInitScript.
+      // This bypasses the Firebase WebChannel write (which can't be intercepted
+      // at the network layer in browser mode) while still testing the full UI
+      // flow: loading state → success/error screen. Never set in production.
+      const pwResult = typeof window !== 'undefined' && window.__pw_intake_result;
+      if (pwResult === 'error') {
+        throw new Error('Simulated network error (Playwright test hook)');
+      } else if (pwResult) {
+        // Expose submitted data so tests can assert field values
+        window.__pw_last_intake = { ...form, env: ENV, status: 'New' };
+      } else {
+        await addDoc(collection(db, `intake_submissions`), {
+          ...form,
+          env:         ENV,
+          submittedAt: serverTimestamp(),
+          status:      "New",
+        });
+      }
       setSubmitted(true);
     } catch (err) {
       console.error("[IntakePage] Submission failed:", err);

@@ -50,27 +50,12 @@ async function setupPage(page) {
   const captured = { payload: null };
 
   if (!IS_LIVE) {
-    // Register broad mock FIRST, then the specific interceptor.
-    // Playwright routes are LIFO — the last-registered route wins on a URL match,
-    // so the intake_submissions interceptor below will take priority over the
-    // generic Firestore write handler inside mockFirebase.
-    await mockFirebase(page);
-
-    // Specific interceptor: capture intake_submissions payload and return a
-    // proper Firestore document so addDoc resolves and setSubmitted(true) fires.
-    await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
-      if (route.request().method() === 'POST') {
-        try {
-          captured.payload = route.request().postDataJSON();
-        } catch { /* binary or malformed — ignore */ }
-      }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        name: 'projects/luminaljourneys/databases/(default)/documents/intake_submissions/mock-doc-id',
-        fields: {},
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString(),
-      })});
-    });
+    // Firebase Firestore writes in browser mode use WebChannel (gRPC streaming),
+    // not the plain REST API — so network-level route mocking cannot intercept
+    // addDoc. Instead we use a window.__pw_intake_result hook injected by
+    // mockFirebase that bypasses the Firebase call and exposes the submitted
+    // data on window.__pw_last_intake for field-level assertions.
+    await mockFirebase(page); // injects window.__pw_intake_result = 'success'
 
     await page.goto('/intake');
   } else {
@@ -199,56 +184,36 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('submit fires Firestore write with correct fields', async ({ page }) => {
-    const captured = await setupPage(page);
+    // Note: Firebase writes in browser mode use WebChannel (gRPC streaming),
+    // not the plain REST API, so network-level interception is not possible here.
+    // We use the window.__pw_intake_result hook (injected by mockFirebase) which
+    // bypasses addDoc and stores the form data on window.__pw_last_intake instead.
+    // Full Firestore write verification runs in the live E2E test (INTAKE_E2E_LIVE=1).
+    await setupPage(page);
     await completeAllSteps(page);
     await page.getByTestId('btn-submit').click();
 
-    // Thank-you screen must appear
+    // Thank-you screen must appear (confirms the submit path executed correctly)
     await expect(page.getByTestId('thank-you')).toBeVisible({ timeout: 8000 });
 
-    // Verify the Firestore payload that was sent
-    expect(captured.payload).not.toBeNull();
-
-    const fields = captured.payload?.fields ?? {};
-
-    // Required fields present
-    expect(fields).toHaveProperty('firstName');
-    expect(fields).toHaveProperty('lastName');
-    expect(fields).toHaveProperty('email');
-    expect(fields).toHaveProperty('status');
-    expect(fields).toHaveProperty('env');
-    expect(fields).toHaveProperty('submittedAt');
-
-    // Status must be "New"
-    const status = fields.status?.stringValue;
-    expect(status).toBe('New');
-
-    // env must be staging or production — never undefined
-    const env = fields.env?.stringValue;
-    expect(['staging', 'production']).toContain(env);
-
-    // Email matches what was entered
-    const emailVal = fields.email?.stringValue;
-    expect(emailVal).toBe(CLIENT.email);
+    // Assert the data that would have been written to Firestore
+    const submitted = await page.evaluate(() => window.__pw_last_intake);
+    expect(submitted).toBeTruthy();
+    expect(submitted.firstName).toBeTruthy();
+    expect(submitted.lastName).toBeTruthy();
+    expect(submitted.email).toBe(CLIENT.email);
+    expect(submitted.status).toBe('New');
+    expect(['staging', 'production']).toContain(submitted.env);
   });
 
   test('submit button shows "Submitting…" state while saving', async ({ page }) => {
-    // mockFirebase first, then the delay route — LIFO means delay route wins
-    await mockFirebase(page);
-    // Delay the Firestore intake write so we can catch the loading state
-    await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
-      await new Promise(r => setTimeout(r, 600));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        name: 'projects/luminaljourneys/databases/(default)/documents/intake_submissions/mock-doc-id',
-        fields: {},
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString(),
-      }) });
-    });
-    await page.goto('/intake');
-    await waitForApp(page);
-
+    // The hook resolves synchronously after a microtask tick, so the button
+    // transitions through Submitting… → thank-you. We assert Submitting… is
+    // shown before the transition completes.
+    await setupPage(page);
     await completeAllSteps(page);
+    // Click and immediately assert — the button shows Submitting… before the
+    // async hook resolves (even though it's fast, React needs a render cycle)
     await page.getByTestId('btn-submit').click();
     await expect(page.getByRole('button', { name: /submitting/i })).toBeVisible({ timeout: 2000 });
   });
@@ -268,11 +233,8 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('network error shows inline error message — does not crash', async ({ page }) => {
-    // mockFirebase first, then the 503 route — LIFO means 503 route wins
-    await mockFirebase(page);
-    await page.route('**firestore.googleapis.com/**intake_submissions**', async (route) => {
-      await route.fulfill({ status: 503, body: 'Service Unavailable' });
-    });
+    // Inject writeResult='error' so the hook throws, triggering the catch block
+    await mockFirebase(page, { writeResult: 'error' });
     await page.goto('/intake');
     await waitForApp(page);
 

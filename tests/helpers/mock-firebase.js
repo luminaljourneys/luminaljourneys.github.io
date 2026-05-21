@@ -54,7 +54,20 @@ const MOCK_AUTHORIZED_EDITORS = {
 
 // ── Main mock installer ───────────────────────────────────────────────────────
 
-export async function mockFirebase(page) {
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{ writeResult?: 'success' | 'error' }} [opts]
+ *   writeResult — controls window.__pw_intake_result injected into the page:
+ *   'success' (default): intake submit resolves, thank-you screen appears.
+ *   'error': intake submit throws, error message appears.
+ */
+export async function mockFirebase(page, { writeResult = 'success' } = {}) {
+  // Inject the Playwright intake test hook before the page script runs.
+  // IntakePage.jsx checks window.__pw_intake_result to bypass the Firebase
+  // WebChannel write (which cannot be intercepted at the REST layer).
+  await page.addInitScript((result) => {
+    window.__pw_intake_result = result;
+  }, writeResult);
 
   // ── Firebase Auth: magic link OOB send ───────────────────────────────────
   await page.route('**identitytoolkit.googleapis.com/**sendOobCode**', async (route) => {
