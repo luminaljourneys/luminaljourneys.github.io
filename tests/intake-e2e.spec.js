@@ -207,13 +207,12 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('submit button shows "Submitting…" state while saving', async ({ page }) => {
-    // The hook resolves synchronously after a microtask tick, so the button
-    // transitions through Submitting… → thank-you. We assert Submitting… is
-    // shown before the transition completes.
+    // Inject a 600ms delay into the test hook so the Submitting… state is
+    // visible long enough for Playwright to assert it. Must be added BEFORE
+    // setupPage (addInitScript scripts run in registration order).
+    await page.addInitScript(() => { window.__pw_intake_delay = 600; });
     await setupPage(page);
     await completeAllSteps(page);
-    // Click and immediately assert — the button shows Submitting… before the
-    // async hook resolves (even though it's fast, React needs a render cycle)
     await page.getByTestId('btn-submit').click();
     await expect(page.getByRole('button', { name: /submitting/i })).toBeVisible({ timeout: 2000 });
   });

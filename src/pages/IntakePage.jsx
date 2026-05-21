@@ -670,6 +670,10 @@ export default function IntakePage() {
       } else if (pwResult) {
         // Expose submitted data so tests can assert field values
         window.__pw_last_intake = { ...form, env: ENV, status: 'New' };
+        // Optional delay so tests can assert the "Submitting…" state before
+        // the hook resolves. Set window.__pw_intake_delay = <ms> via addInitScript.
+        const delay = typeof window.__pw_intake_delay === 'number' ? window.__pw_intake_delay : 0;
+        if (delay > 0) await new Promise(r => setTimeout(r, delay));
       } else {
         await addDoc(collection(db, `intake_submissions`), {
           ...form,
