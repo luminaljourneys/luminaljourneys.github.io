@@ -192,7 +192,7 @@ function IntakesTab() {
           </table>
         </div>
         <div style={{ padding: "0.75rem 1.2rem", borderTop: "1px solid var(--color-border)", background: "#e6ddd0", ...S.labelMono }}>
-          Click status badge to advance · Click ▼ to expand · Data is local until Firestore intakes are connected
+          ⚠ Mock data (local only) — not real submissions · Click status badge to advance · Click ▼ to expand
         </div>
       </div>
     </div>
