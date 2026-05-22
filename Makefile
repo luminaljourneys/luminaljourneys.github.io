@@ -84,10 +84,16 @@ qa:
 qa-all:
 	cd $(ROOT) && npx playwright test
 
-# Interactive UI mode — step through tests visually
+# Interactive UI mode — step through tests visually (parallel, click to run)
 # Usage: make qa-ui
 qa-ui:
 	cd $(ROOT) && npx playwright test --ui
+
+# Watch mode — runs ALL tests sequentially in a headed browser so you can
+# watch every test play out without clicking anything.
+# Usage: make qa-watch
+qa-watch:
+	cd $(ROOT) && npx playwright test --project=chromium --workers=1 --headed --reporter=line
 
 # Open last HTML report
 # Usage: make qa-report
@@ -109,4 +115,4 @@ qa-staging:
 qa-login:
 	cd $(ROOT) && npx playwright test tests/login.spec.js --project=chromium
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-report qa-file qa-staging qa-login
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-login
