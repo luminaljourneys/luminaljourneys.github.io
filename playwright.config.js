@@ -56,14 +56,23 @@ export default defineConfig({
     },
   },
 
-  // Global test timeout — fully proportional to slowMo.
-  // Formula: slowMo × 100 actions (generous upper bound for any test) + 10s buffer.
-  // Examples: speed=400 → 50s  speed=800 → 90s  speed=1500 → 160s  speed=2000 → 210s
-  timeout: slowMo ? slowMo * 100 + 10_000 : 15_000,
+  // Global test timeout.
+  // Fast mode (no slowMo): 15s — catches hangs quickly.
+  // Watch mode: 60s base (covers full use-case tests up to 1 min of real
+  // interaction) + slowMo × 100 actions overhead on top.
+  //
+  //   speed=400  → 100s   speed=800  → 140s
+  //   speed=1500 → 210s   speed=2000 → 260s
+  timeout: slowMo ? 60_000 + slowMo * 100 : 15_000,
 
-  // Expect timeout — proportional but smaller (single assertion, not full test)
-  // Examples: speed=400 → 9s  speed=800 → 14s  speed=1500 → 25s  speed=2000 → 32s
-  expect: { timeout: slowMo ? slowMo * 15 + 3_000 : 4_000 },
+  // Expect timeout — single assertion budget.
+  // Fast mode: 4s.
+  // Watch mode: minimum 60s (full use-case forms can be long and will grow),
+  // scaling up proportionally beyond that for very high speeds.
+  //
+  //   speed=800  → 60s   speed=1200 → 60s
+  //   speed=1500 → 60s   speed=2000 → 60s   speed=3000 → 65s
+  expect: { timeout: slowMo ? Math.max(60_000, slowMo * 15 + 20_000) : 4_000 },
 
   projects: [
     // ── Default: Chromium desktop ───────────────────────────────────────────
