@@ -138,52 +138,70 @@ test.describe('Intake Form', () => {
 
 // ── Step-fill helpers ──────────────────────────────────────────────────────────
 
-/** Fill all visible inputs on step 0 (Personal Info from fixture) */
-async function fillStep0(page) {
-  // First Name + Last Name (text inputs)
-  const textInputs = page.locator('input[type="text"]');
-  const count = await textInputs.count();
-  for (let i = 0; i < count; i++) {
-    await textInputs.nth(i).fill('Test');
-  }
-  // Date of Birth
-  const dateInput = page.locator('input[type="date"]');
-  if (await dateInput.isVisible()) {
-    await dateInput.fill('1990-01-15');
-  }
-  // Pronouns select (optional — fill to be safe)
-  const selects = page.locator('select');
-  const sc = await selects.count();
-  for (let i = 0; i < sc; i++) {
-    await selects.nth(i).selectOption({ index: 1 });
-  }
-}
+/**
+ * Fill every visible field on the current step.
+ * Form-config agnostic — works regardless of which fields exist or are added.
+ * Uses name + placeholder hints to pick realistic values; falls back to 'Test'
+ * so no required field is ever left blank.
+ */
+async function fillCurrentStep(page) {
+  const inputs = page.locator('input');
+  const inputCount = await inputs.count();
+  for (let i = 0; i < inputCount; i++) {
+    const input = inputs.nth(i);
+    if (!await input.isVisible()) continue;
+    const type        = (await input.getAttribute('type')        ?? 'text').toLowerCase();
+    const name        = (await input.getAttribute('name')        ?? '').toLowerCase();
+    const placeholder = (await input.getAttribute('placeholder') ?? '').toLowerCase();
+    const hint = `${name} ${placeholder}`;
 
-/** Fill step 1: email */
-async function fillStep1(page) {
-  const emailInput = page.locator('input[type="email"]');
-  if (await emailInput.isVisible()) {
-    await emailInput.fill('test@example.com');
+    if (type === 'date') {
+      await input.fill('1990-01-15');
+    } else if (type === 'email') {
+      await input.fill('test@example.com');
+    } else if (type === 'tel') {
+      await input.fill('555-123-4567');
+    } else if (/first.?name|firstname/i.test(hint)) {
+      await input.fill('Amara');
+    } else if (/last.?name|lastname/i.test(hint)) {
+      await input.fill('Osei');
+    } else if (/prefer|nickname|call you/i.test(hint)) {
+      await input.fill('Amara');
+    } else if (/street|address/i.test(hint)) {
+      await input.fill('123 Wellness Way');
+    } else if (/city/i.test(hint)) {
+      await input.fill('San Francisco');
+    } else if (/state/i.test(hint)) {
+      await input.fill('CA');
+    } else if (/zip|postal/i.test(hint)) {
+      await input.fill('94102');
+    } else {
+      await input.fill('Test');
+    }
   }
-  const telInput = page.locator('input[type="tel"]');
-  if (await telInput.isVisible()) {
-    await telInput.fill('555-123-4567');
-  }
-}
 
-/** Fill step 2: goal select + notes textarea */
-async function fillStep2(page) {
   const selects = page.locator('select');
-  const sc = await selects.count();
-  for (let i = 0; i < sc; i++) {
-    await selects.nth(i).selectOption({ index: 1 });
+  const selectCount = await selects.count();
+  for (let i = 0; i < selectCount; i++) {
+    const sel = selects.nth(i);
+    if (!await sel.isVisible()) continue;
+    await sel.selectOption({ index: 1 });
   }
+
   const textareas = page.locator('textarea');
-  const tc = await textareas.count();
-  for (let i = 0; i < tc; i++) {
-    await textareas.nth(i).fill('Sample notes for testing.');
+  const textareaCount = await textareas.count();
+  for (let i = 0; i < textareaCount; i++) {
+    const ta = textareas.nth(i);
+    if (!await ta.isVisible()) continue;
+    await ta.fill('Sample notes for testing.');
   }
 }
+
+// Step aliases — all delegate to fillCurrentStep so adding/removing form
+// fields never requires updating these helpers
+const fillStep0 = fillCurrentStep;
+const fillStep1 = fillCurrentStep;
+const fillStep2 = fillCurrentStep;
 
 /**
  * Advance through all data steps to reach Confirm.

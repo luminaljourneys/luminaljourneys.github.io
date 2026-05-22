@@ -26,15 +26,21 @@ import { mockFirebase, waitForApp } from './helpers/mock-firebase.js';
 // ── Test client persona ───────────────────────────────────────────────────────
 
 const CLIENT = {
-  firstName:       'Amara',
-  lastName:        'Osei',
-  preferredName:   'Amara',
-  dateOfBirth:     '1990-04-12',
-  pronouns:        'She / Her',
-  email:           'amara.osei.test@example.com',
-  phone:           '555-234-5678',
-  primaryGoal:     'Stress & Anxiety Management',
-  additionalNotes: 'Looking forward to starting my wellness journey.',
+  firstName:        'Amara',
+  lastName:         'Osei',
+  preferredName:    'Amara',
+  dateOfBirth:      '1990-04-12',
+  pronouns:         'She / Her',
+  email:            'amara.osei.test@example.com',
+  phone:            '555-234-5678',
+  address:          '123 Wellness Way',
+  city:             'San Francisco',
+  state:            'CA',
+  zip:              '94102',
+  preferredContact: 'Email',
+  primaryGoal:      'Stress & Anxiety Management',
+  howHeard:         'Friend or Family',
+  additionalNotes:  'Looking forward to starting my wellness journey.',
 };
 
 const IS_LIVE = !!process.env.INTAKE_E2E_LIVE;
@@ -66,49 +72,87 @@ async function setupPage(page) {
   return captured;
 }
 
-/** Fill Step 0 — Personal Info */
-async function fillPersonalInfo(page) {
-  // First Name
-  const firstNameInput = page.locator('input').filter({ hasText: '' }).first();
-  // Use placeholder-based locators which match the fixture field labels
-  await page.getByPlaceholder(/first name/i).fill(CLIENT.firstName);
-  await page.getByPlaceholder(/last name/i).fill(CLIENT.lastName);
+/**
+ * Fill every visible field on the current step.
+ * Form-config agnostic — works regardless of which fields exist or are added
+ * later. Uses name + placeholder hints to pick the right CLIENT value;
+ * falls back to a sensible default so required fields are never left blank.
+ */
+async function fillCurrentStep(page) {
+  // ── Inputs ────────────────────────────────────────────────────────────────
+  const inputs = page.locator('input');
+  const inputCount = await inputs.count();
+  for (let i = 0; i < inputCount; i++) {
+    const input = inputs.nth(i);
+    if (!await input.isVisible()) continue;
+    const type        = (await input.getAttribute('type')        ?? 'text').toLowerCase();
+    const name        = (await input.getAttribute('name')        ?? '').toLowerCase();
+    const placeholder = (await input.getAttribute('placeholder') ?? '').toLowerCase();
+    const hint = `${name} ${placeholder}`;
 
-  const preferred = page.getByPlaceholder(/what should we call you/i);
-  if (await preferred.isVisible()) await preferred.fill(CLIENT.preferredName);
-
-  const dob = page.locator('input[type="date"]');
-  if (await dob.isVisible()) await dob.fill(CLIENT.dateOfBirth);
-
-  // Pronouns — select first non-empty option matching client value
-  const pronounsSelect = page.locator('select').first();
-  if (await pronounsSelect.isVisible()) {
-    await pronounsSelect.selectOption(CLIENT.pronouns);
-  }
-}
-
-/** Fill Step 1 — Contact Info */
-async function fillContactInfo(page) {
-  await page.locator('input[type="email"]').fill(CLIENT.email);
-  const tel = page.locator('input[type="tel"]');
-  if (await tel.isVisible()) await tel.fill(CLIENT.phone);
-}
-
-/** Fill Step 2 — About You */
-async function fillAboutYou(page) {
-  // Primary Goal dropdown
-  const goalSelect = page.locator('select');
-  const sc = await goalSelect.count();
-  for (let i = 0; i < sc; i++) {
-    const sel = goalSelect.nth(i);
-    if (await sel.isVisible()) {
-      await sel.selectOption(CLIENT.primaryGoal).catch(() => sel.selectOption({ index: 1 }));
+    if (type === 'date') {
+      await input.fill(CLIENT.dateOfBirth);
+    } else if (type === 'email') {
+      await input.fill(CLIENT.email);
+    } else if (type === 'tel') {
+      await input.fill(CLIENT.phone);
+    } else if (/first.?name|firstname/i.test(hint)) {
+      await input.fill(CLIENT.firstName);
+    } else if (/last.?name|lastname/i.test(hint)) {
+      await input.fill(CLIENT.lastName);
+    } else if (/prefer|nickname|call you/i.test(hint)) {
+      await input.fill(CLIENT.preferredName);
+    } else if (/street|address/i.test(hint)) {
+      await input.fill(CLIENT.address);
+    } else if (/city/i.test(hint)) {
+      await input.fill(CLIENT.city);
+    } else if (/state/i.test(hint)) {
+      await input.fill(CLIENT.state);
+    } else if (/zip|postal/i.test(hint)) {
+      await input.fill(CLIENT.zip);
+    } else if (/phone|tel/i.test(hint)) {
+      await input.fill(CLIENT.phone);
+    } else {
+      // Unknown field — fill with first name so required fields aren't blank
+      await input.fill(CLIENT.firstName);
     }
   }
-  // Additional notes textarea
-  const notes = page.locator('textarea');
-  if (await notes.isVisible()) await notes.fill(CLIENT.additionalNotes);
+
+  // ── Selects ───────────────────────────────────────────────────────────────
+  const selects = page.locator('select');
+  const selectCount = await selects.count();
+  for (let i = 0; i < selectCount; i++) {
+    const sel  = selects.nth(i);
+    if (!await sel.isVisible()) continue;
+    const name = (await sel.getAttribute('name') ?? '').toLowerCase();
+
+    if (/pronoun/i.test(name)) {
+      await sel.selectOption(CLIENT.pronouns).catch(() => sel.selectOption({ index: 1 }));
+    } else if (/goal/i.test(name)) {
+      await sel.selectOption(CLIENT.primaryGoal).catch(() => sel.selectOption({ index: 1 }));
+    } else if (/heard|referral|source/i.test(name)) {
+      await sel.selectOption(CLIENT.howHeard).catch(() => sel.selectOption({ index: 1 }));
+    } else if (/contact|method|prefer/i.test(name)) {
+      await sel.selectOption(CLIENT.preferredContact).catch(() => sel.selectOption({ index: 1 }));
+    } else {
+      await sel.selectOption({ index: 1 });
+    }
+  }
+
+  // ── Textareas ─────────────────────────────────────────────────────────────
+  const textareas = page.locator('textarea');
+  const textareaCount = await textareas.count();
+  for (let i = 0; i < textareaCount; i++) {
+    const ta = textareas.nth(i);
+    if (!await ta.isVisible()) continue;
+    await ta.fill(CLIENT.additionalNotes);
+  }
 }
+
+// Step-specific aliases kept for readability — all delegate to fillCurrentStep
+const fillPersonalInfo = fillCurrentStep;
+const fillContactInfo  = fillCurrentStep;
+const fillAboutYou     = fillCurrentStep;
 
 /** Click Continue and wait for step to advance */
 async function advance(page) {
