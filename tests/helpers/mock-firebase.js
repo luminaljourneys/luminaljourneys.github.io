@@ -13,8 +13,9 @@
  *   test.beforeEach(async ({ page }) => { await mockFirebase(page); });
  */
 
-import { FORM_CONFIG_FIXTURE } from '../fixtures/form-config.js';
-import { MOCK_PAGES }           from '../fixtures/pages.js';
+import { FORM_CONFIG_FIXTURE }  from '../fixtures/form-config.js';
+import { MOCK_PAGES }            from '../fixtures/pages.js';
+import { MOCK_SUBMISSIONS }      from '../fixtures/intake-submissions.js';
 
 // ── Firestore REST response helpers ──────────────────────────────────────────
 
@@ -151,6 +152,47 @@ export async function mockFirebase(page, { writeResult = 'success' } = {}) {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([]),
+      });
+      return;
+    }
+
+    // intake_submissions — runQuery (onSnapshot uses this for filtered queries)
+    if (url.includes('intake_submissions') || url.includes('documents:runQuery')) {
+      // Build Firestore REST doc shapes manually so we can emit a real
+      // `timestampValue` for submittedAt (the generic wrap() turns objects
+      // into mapValues which breaks the JS SDK's Timestamp conversion).
+      const sv  = (v) => ({ stringValue: v ?? '' });
+      const docs = MOCK_SUBMISSIONS.map(s => ({
+        name: `projects/lj/databases/(default)/documents/intake_submissions/${s.id}`,
+        fields: {
+          firstName:        sv(s.firstName),
+          lastName:         sv(s.lastName),
+          preferredName:    sv(s.preferredName),
+          dateOfBirth:      sv(s.dateOfBirth),
+          pronouns:         sv(s.pronouns),
+          email:            sv(s.email),
+          phone:            sv(s.phone),
+          address:          sv(s.address),
+          city:             sv(s.city),
+          state:            sv(s.state),
+          zip:              sv(s.zip),
+          preferredContact: sv(s.preferredContact),
+          primaryGoal:      sv(s.primaryGoal),
+          hearAboutUs:      sv(s.hearAboutUs),
+          additionalNotes:  sv(s.additionalNotes),
+          env:              sv(s.env),
+          status:           sv(s.status),
+          notes:            sv(s.notes),
+          // Real Firestore Timestamp REST shape — SDK converts to Timestamp obj
+          submittedAt: { timestampValue: new Date(s.submittedAt * 1000).toISOString() },
+        },
+        createTime: '2026-01-01T00:00:00Z',
+        updateTime: '2026-05-19T00:00:00Z',
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(firestoreQueryResponse(docs)),
       });
       return;
     }

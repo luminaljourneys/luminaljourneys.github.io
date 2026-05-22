@@ -13,10 +13,12 @@
 import React, { useState, useEffect } from "react";
 import MockupBanner from "../components/MockupBanner.jsx";
 import { navigate } from "../App.jsx";
-import { useFormConfig } from "../hooks/useFormConfig.js";
-import { useSitePages }  from "../hooks/useSitePages.js";
-import { usePublish }    from "../hooks/usePublish.js";
-import { useEditMode }   from "../context/EditModeContext.jsx";
+import { useFormConfig }           from "../hooks/useFormConfig.js";
+import { useSitePages }            from "../hooks/useSitePages.js";
+import { usePublish }              from "../hooks/usePublish.js";
+import { useEditMode }             from "../context/EditModeContext.jsx";
+import { useIntakeSubmissions }    from "../hooks/useIntakeSubmissions.js";
+import { ENV }                     from "../lib/collections.js";
 
 // ─── Shared style tokens ──────────────────────────────────────────────────────
 const S = {
@@ -45,17 +47,15 @@ const S = {
   }),
 };
 
-// ─── Mock intake data ─────────────────────────────────────────────────────────
-const MOCK_INTAKES = [
-  { id: 1, firstName: "Amara",   lastName: "Osei",   preferredName: "Amara",  dateOfBirth: "1990-04-12", pronouns: "She / Her", email: "amara@email.nl",   phone: "+31 6 1234 5678", address: "Keizersgracht 412",        city: "Amsterdam", state: "NH", zip: "1016 GC", preferredContact: "email", primaryGoal: "Stress & Anxiety Management", hearAboutUs: "Friend or Family", additionalNotes: "Looking forward to starting.", submittedAt: "2026-03-13", status: "New",       notes: "" },
-  { id: 2, firstName: "Lucia",   lastName: "Vega",   preferredName: "",       dateOfBirth: "1985-09-22", pronouns: "She / Her", email: "lucia@email.nl",   phone: "+31 6 2345 6789", address: "Witte de Withstraat 88",   city: "Rotterdam", state: "ZH", zip: "3012 BN", preferredContact: "phone", primaryGoal: "Hormonal Balance",            hearAboutUs: "Google Search",        additionalNotes: "",                           submittedAt: "2026-03-12", status: "Contacted",  notes: "" },
-  { id: 3, firstName: "Priya",   lastName: "Nair",   preferredName: "Pri",    dateOfBirth: "1993-01-05", pronouns: "She / Her", email: "priya@email.nl",   phone: "+31 6 3456 7890", address: "Grote Marktstraat 201",    city: "Den Haag",  state: "ZH", zip: "2511 BK", preferredContact: "text",  primaryGoal: "Sleep Improvement",           hearAboutUs: "Social Media",         additionalNotes: "Have tried melatonin.",      submittedAt: "2026-03-11", status: "Scheduled",  notes: "" },
-  { id: 4, firstName: "Camille", lastName: "Dubois", preferredName: "Cami",   dateOfBirth: "1988-07-30", pronouns: "She / Her", email: "camille@email.nl", phone: "+31 6 4567 8901", address: "Nachtegaalstraat 54",      city: "Utrecht",   state: "UT", zip: "3581 AK", preferredContact: "email", primaryGoal: "Energy & Vitality",           hearAboutUs: "Healthcare Provider Referral", additionalNotes: "",                      submittedAt: "2026-03-10", status: "New",        notes: "" },
-];
-
 const STATUS_META  = { New: { bg: "rgba(224,122,95,0.12)", color: "#C4604A", dot: "#E07A5F" }, Contacted: { bg: "rgba(95,158,160,0.12)", color: "#2E7D7F", dot: "#5F9EA0" }, Scheduled: { bg: "rgba(17,76,92,0.12)", color: "#114C5C", dot: "#114C5C" } };
 const STATUS_ORDER = ["New", "Contacted", "Scheduled"];
-const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** Render a date from either a JS Date (Firestore Timestamp.toDate()) or a plain string. */
+const fmt = (d) => {
+  if (!d) return "—";
+  const date = d instanceof Date ? d : new Date(d + "T00:00:00");
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 
 // ─── Auth gate (shown when not in edit mode) ──────────────────────────────────
 function AdminGate() {
@@ -74,7 +74,7 @@ function AdminGate() {
 
 // ─── Tab: Intakes ─────────────────────────────────────────────────────────────
 function IntakesTab() {
-  const [intakes, setIntakes] = useState(MOCK_INTAKES);
+  const { intakes, loading, error, updateStatus, updateNotes } = useIntakeSubmissions();
   const [search, setSearch]   = useState("");
   const [expanded, setExpanded] = useState(null);
   const [sortCol, setSortCol]   = useState("submittedAt");
@@ -84,13 +84,17 @@ function IntakesTab() {
 
   const filtered = intakes.filter(r => {
     const q = search.toLowerCase();
-    return [r.firstName, r.lastName, r.email, r.primaryGoal, r.status, r.city].some(v => v.toLowerCase().includes(q));
+    return [r.firstName, r.lastName, r.email, r.primaryGoal, r.status, r.city].some(v => (v || "").toLowerCase().includes(q));
   }).sort((a, b) => {
-    const av = a[sortCol] || "", bv = b[sortCol] || "";
+    const av = a[sortCol] instanceof Date ? a[sortCol].toISOString() : (a[sortCol] || "");
+    const bv = b[sortCol] instanceof Date ? b[sortCol].toISOString() : (b[sortCol] || "");
     return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
   });
 
-  const cycleStatus = (id) => setIntakes(prev => prev.map(r => r.id === id ? { ...r, status: STATUS_ORDER[(STATUS_ORDER.indexOf(r.status) + 1) % STATUS_ORDER.length] } : r));
+  const cycleStatus = (id, currentStatus) => {
+    const next = STATUS_ORDER[(STATUS_ORDER.indexOf(currentStatus) + 1) % STATUS_ORDER.length];
+    updateStatus(id, next);
+  };
   const handleSort  = (col) => { if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc"); else { setSortCol(col); setSortDir("asc"); } };
   const counts = { total: intakes.length, new: intakes.filter(r => r.status === "New").length, contacted: intakes.filter(r => r.status === "Contacted").length, scheduled: intakes.filter(r => r.status === "Scheduled").length };
 
@@ -99,13 +103,25 @@ function IntakesTab() {
 
   const COLS = [["#", null], ["First", "firstName"], ["Last", "lastName"], ["Preferred", "preferredName"], ["DOB", "dateOfBirth"], ["Pronouns", "pronouns"], ["Email", "email"], ["Phone", null], ["City", "city"], ["Contact", "preferredContact"], ["Goal", "primaryGoal"], ["Source", "hearAboutUs"], ["Submitted", "submittedAt"], ["Status", "status"], ["Notes", null], ["", null]];
 
+  if (loading) return (
+    <div style={{ minHeight: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#89a99e", fontFamily: "var(--font-mono)", fontSize: "0.82rem" }}>
+      Loading submissions…
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#C4604A", fontFamily: "var(--font-mono)", fontSize: "0.82rem" }}>
+      Error: {error}
+    </div>
+  );
+
   return (
     <div>
       {/* Metrics */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         {[["Total", counts.total, "var(--color-primary)"], ["New", counts.new, "#E07A5F"], ["Contacted", counts.contacted, "#5F9EA0"], ["Scheduled", counts.scheduled, "#114C5C"]].map(([label, val, accent]) => (
           <div key={label} style={{ background: "#fff", border: "1px solid var(--color-border)", borderRadius: "0.8rem", padding: "1.2rem 1.5rem", borderTop: "3px solid " + accent }}>
-            <div style={{ fontSize: "2rem", fontWeight: 600, color: accent, lineHeight: 1, marginBottom: "0.3rem" }}>{val}</div>
+            <div style={{ fontSize: "2rem", fontWeight: 600, color: accent, lineHeight: 1, marginBottom: "0.3rem" }} data-testid={`metric-${label.toLowerCase()}`}>{val}</div>
             <div style={S.labelMono}>{label}</div>
           </div>
         ))}
@@ -118,12 +134,12 @@ function IntakesTab() {
             Client Intakes <span style={{ ...S.labelMono, fontWeight: 400, marginLeft: "0.5rem" }}>{filtered.length} records</span>
           </span>
           <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" style={{ ...S.input, width: 200, padding: "0.45rem 0.9rem", borderRadius: "2rem" }} />
+            <input data-testid="intakes-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" style={{ ...S.input, width: 200, padding: "0.45rem 0.9rem", borderRadius: "2rem" }} />
             <button onClick={() => navigate("/intake")} style={S.btn("gold")}>+ New Intake</button>
           </div>
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table data-testid="intakes-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{COLS.map(([label, col]) => <th key={label} style={{ ...th, cursor: col ? "pointer" : "default" }} onClick={() => col && handleSort(col)}>{label}{col && sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>)}</tr>
             </thead>
@@ -149,7 +165,7 @@ function IntakesTab() {
                       <td style={{ ...td, fontSize: "0.82rem" }}>{row.hearAboutUs || "—"}</td>
                       <td style={{ ...td, whiteSpace: "nowrap", fontSize: "0.82rem", color: "#89a99e", fontFamily: "var(--font-mono)" }}>{fmt(row.submittedAt)}</td>
                       <td style={td}>
-                        <button onClick={() => cycleStatus(row.id)} style={{ background: sc.bg, color: sc.color, border: "none", borderRadius: "2rem", padding: "0.28rem 0.8rem", fontSize: "0.73rem", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap" }}>
+                        <button onClick={() => cycleStatus(row.id, row.status)} data-testid="status-badge" style={{ background: sc.bg, color: sc.color, border: "none", borderRadius: "2rem", padding: "0.28rem 0.8rem", fontSize: "0.73rem", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap" }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: sc.dot, display: "inline-block" }} />{row.status}
                         </button>
                       </td>
@@ -158,7 +174,7 @@ function IntakesTab() {
                           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                             <textarea autoFocus value={noteDraft} onChange={e => setNoteDraft(e.target.value)} rows={3} style={{ width: "100%", padding: "0.5rem 0.6rem", border: "1.5px solid var(--color-primary)", borderRadius: "0.4rem", fontSize: "0.82rem", fontFamily: "'DM Sans', sans-serif", resize: "none", outline: "none", background: "#e6ddd0", color: "var(--color-text)", boxSizing: "border-box" }} />
                             <div style={{ display: "flex", gap: "0.4rem" }}>
-                              <button onClick={() => { setIntakes(prev => prev.map(r => r.id === row.id ? { ...r, notes: noteDraft } : r)); setNoteEditing(null); }} style={{ background: "#172f2d", color: "#fff", border: "none", borderRadius: "0.4rem", padding: "0.3rem 0.7rem", fontSize: "0.75rem", cursor: "pointer" }}>Save</button>
+                              <button onClick={() => { updateNotes(row.id, noteDraft); setNoteEditing(null); }} style={{ background: "#172f2d", color: "#fff", border: "none", borderRadius: "0.4rem", padding: "0.3rem 0.7rem", fontSize: "0.75rem", cursor: "pointer" }}>Save</button>
                               <button onClick={() => setNoteEditing(null)} style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: "0.4rem", padding: "0.3rem 0.7rem", fontSize: "0.75rem", cursor: "pointer", color: "#89a99e", fontFamily: "var(--font-mono)" }}>Cancel</button>
                             </div>
                           </div>
@@ -191,8 +207,8 @@ function IntakesTab() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: "0.75rem 1.2rem", borderTop: "1px solid var(--color-border)", background: "#e6ddd0", ...S.labelMono }}>
-          ⚠ Mock data (local only) — not real submissions · Click status badge to advance · Click ▼ to expand
+        <div style={{ padding: "0.75rem 1.2rem", borderTop: "1px solid var(--color-border)", background: "#e6ddd0", ...S.labelMono }} data-testid="intakes-footer">
+          Showing {ENV} submissions · Click status badge to advance · Click ▼ to expand
         </div>
       </div>
     </div>
