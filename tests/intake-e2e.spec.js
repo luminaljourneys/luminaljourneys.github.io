@@ -207,14 +207,17 @@ test.describe('Intake — full client journey (mocked)', () => {
   });
 
   test('submit button shows "Submitting…" state while saving', async ({ page }) => {
-    // Inject a 600ms delay into the test hook so the Submitting… state is
-    // visible long enough for Playwright to assert it. Must be added BEFORE
-    // setupPage (addInitScript scripts run in registration order).
-    await page.addInitScript(() => { window.__pw_intake_delay = 600; });
+    // Delay scales with PW_SLOW_MO so "Submitting…" stays visible long enough
+    // at any watch speed. Minimum 600ms; 2× slowMo at higher speeds.
+    // Must be injected BEFORE setupPage (addInitScript runs in order).
+    const slowMo = parseInt(process.env.PW_SLOW_MO ?? '0') || 0;
+    const delay  = Math.max(600, slowMo * 2);
+    await page.addInitScript((d) => { window.__pw_intake_delay = d; }, delay);
     await setupPage(page);
     await completeAllSteps(page);
     await page.getByTestId('btn-submit').click();
-    await expect(page.getByRole('button', { name: /submitting/i })).toBeVisible({ timeout: 2000 });
+    // No hardcoded timeout — uses the global expect timeout (60s in watch mode)
+    await expect(page.getByRole('button', { name: /submitting/i })).toBeVisible();
   });
 
   test('thank-you screen shows client first name', async ({ page }) => {
