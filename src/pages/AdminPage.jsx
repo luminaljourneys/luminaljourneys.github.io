@@ -1116,7 +1116,10 @@ function Dashboard() {
       {/* NAV */}
       <div style={{ padding: "1rem clamp(1rem, 3vw, 2.5rem)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#172f2d", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-          <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "rgba(249,247,244,0.95)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</button>
+          <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.55rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <img src="/luminaljourneys-primary-logo-mark-gold.png" alt="Luminal Journeys" style={{ height: 24, width: "auto" }} />
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "rgba(249,247,244,0.95)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</span>
+          </button>
           <span style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
           <span style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.75rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>Admin</span>
         </div>

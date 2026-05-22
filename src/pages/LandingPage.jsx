@@ -38,14 +38,13 @@ function Wordmark({ color = B.deep, size = "1rem" }) {
   );
 }
 
-function LogoMark({ color = B.deep, size = 32 }) {
+function LogoMark({ size = 32 }) {
   return (
-    <svg width={size} height={size * 1.28} viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1"   y="1"   width="30" height="39" rx="0.5" stroke={color} strokeWidth="1.8" fill="none"/>
-      <rect x="4.5" y="4.5" width="23" height="32" rx="0.5" stroke={color} strokeWidth="1.4" fill="none"/>
-      <rect x="8.5" y="8.5" width="15" height="24" rx="0.5" stroke={color} strokeWidth="1.1" fill="none"/>
-      <rect x="13"  y="13"  width="6"  height="15" rx="0.5" stroke={color} strokeWidth="0.9" fill="none"/>
-    </svg>
+    <img
+      src="/luminaljourneys-primary-logo-mark-gold.png"
+      alt="Luminal Journeys"
+      style={{ height: size, width: "auto", display: "block" }}
+    />
   );
 }
 
@@ -116,7 +115,7 @@ export default function LandingPage() {
         transition: "all 0.3s"
       }}>
         <div data-testid="nav-logo" style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <LogoMark color={B.deep} size={18} />
+          <LogoMark size={mobile ? 24 : 28} />
           <Wordmark color={B.deep} size={mobile ? "0.72rem" : "0.85rem"} />
         </div>
         {!mobile && (
@@ -349,7 +348,7 @@ export default function LandingPage() {
         gap: "1rem", flexWrap: "wrap",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <LogoMark color={B.deep} size={16} />
+          <LogoMark size={20} />
           <Wordmark color={B.deep} size="0.75rem" />
         </div>
 
