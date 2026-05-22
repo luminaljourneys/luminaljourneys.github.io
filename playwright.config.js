@@ -5,8 +5,15 @@
 //
 // Firebase is mocked at the network layer in tests/helpers/mock-firebase.js
 // so tests NEVER wait on Firestore — pure JS speed.
+//
+// Env vars that control visual / watch behaviour:
+//   PW_SLOW_MO=800   — ms delay between every action (human-pace watching)
+//   PW_HEADED=1      — show browser window (set automatically by make qa-watch)
 
 import { defineConfig, devices } from '@playwright/test';
+
+const slowMo  = process.env.PW_SLOW_MO  ? parseInt(process.env.PW_SLOW_MO)  : 0;
+const headed  = !!process.env.PW_HEADED || !!process.env.PWDEBUG;
 
 export default defineConfig({
   testDir: './tests',
@@ -36,10 +43,17 @@ export default defineConfig({
     video: 'on',
 
     // Global timeout per action (click, fill, etc.)
-    actionTimeout: 5_000,
+    // Loosen when slowMo is active so assertions don't time out mid-animation
+    actionTimeout:    slowMo ? 15_000 : 5_000,
 
     // Navigation timeout
-    navigationTimeout: 10_000,
+    navigationTimeout: slowMo ? 30_000 : 10_000,
+
+    // Human-pace delay between every action — set via PW_SLOW_MO env var
+    launchOptions: {
+      slowMo,
+      headless: !headed,
+    },
   },
 
   // Global test timeout — no test should take more than 15s

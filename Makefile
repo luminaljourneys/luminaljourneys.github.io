@@ -7,6 +7,8 @@
 #   make staging m="feat: ..."  → commit + push to dev → staging deploy
 #   make prod                   → promote staging → live on luminaljourneys.com
 #   make qa                     → run Playwright tests (fast, chromium only)
+#   make qa-watch               → watch all tests at human pace in a real browser
+#   make qa-ui                  → Playwright UI, 1 worker — click group → watch sequence
 # ─────────────────────────────────────────────────────────────────────────────
 
 ROOT    := $(shell pwd)
@@ -84,16 +86,20 @@ qa:
 qa-all:
 	cd $(ROOT) && npx playwright test
 
-# Interactive UI mode — step through tests visually (parallel, click to run)
+# Playwright UI — 1 worker so tests run one at a time when you click ▷.
+# Click a describe group (e.g. "Landing Page") → ▷ to run the whole group in sequence.
+# Click any test row to watch its step-by-step trace with cursor movements.
 # Usage: make qa-ui
 qa-ui:
-	cd $(ROOT) && npx playwright test --ui
+	cd $(ROOT) && npx playwright test --ui --workers=1
 
-# Watch mode — runs ALL tests sequentially in a headed browser so you can
-# watch every test play out without clicking anything.
+# Watch mode — runs ALL tests sequentially at human pace in a visible browser.
+# You can see every click, fill, and navigation just like a real user would.
+# Tweak speed: make qa-watch speed=400  (default 800ms between actions)
 # Usage: make qa-watch
+speed ?= 800
 qa-watch:
-	cd $(ROOT) && npx playwright test --project=chromium --workers=1 --headed --reporter=line
+	cd $(ROOT) && PW_SLOW_MO=$(speed) PW_HEADED=1 npx playwright test --project=chromium --workers=1 --reporter=line
 
 # Open last HTML report
 # Usage: make qa-report
