@@ -56,11 +56,12 @@ export default defineConfig({
     },
   },
 
-  // Global test timeout — no test should take more than 15s
-  timeout: 15_000,
+  // Global test timeout — scales up when slowMo is active so watch mode
+  // doesn't time out mid-test (800ms × 20 actions = 16s, already over 15s)
+  timeout: slowMo ? Math.max(60_000, slowMo * 80) : 15_000,
 
-  // Expect timeout — assertions fail fast
-  expect: { timeout: 4_000 },
+  // Expect timeout — also loosened in watch mode
+  expect: { timeout: slowMo ? 15_000 : 4_000 },
 
   projects: [
     // ── Default: Chromium desktop ───────────────────────────────────────────
