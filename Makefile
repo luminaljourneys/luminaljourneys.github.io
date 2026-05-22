@@ -9,6 +9,12 @@
 #   make qa                     → run Playwright tests (fast, chromium only)
 #   make qa-watch               → watch all tests at human pace in a real browser
 #   make qa-ui                  → Playwright UI, 1 worker — click group → watch sequence
+#
+# CLOUD FUNCTIONS:
+#   make fn-install             → npm install inside functions/
+#   make fn-build               → compile TypeScript → lib/
+#   make fn-deploy              → build + deploy functions to Firebase
+#   make fn-secret              → set RESEND_API_KEY secret (run once)
 # ─────────────────────────────────────────────────────────────────────────────
 
 ROOT    := $(shell pwd)
@@ -121,4 +127,27 @@ qa-staging:
 qa-login:
 	cd $(ROOT) && npx playwright test tests/login.spec.js --project=chromium
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-login
+# ── Cloud Functions ───────────────────────────────────────────────────────────
+
+# Install function dependencies
+fn-install:
+	cd $(ROOT)/functions && npm install
+
+# Compile TypeScript → lib/
+fn-build:
+	cd $(ROOT)/functions && npm run build
+
+# Build + deploy functions only
+fn-deploy:
+	cd $(ROOT)/functions && npm run build
+	firebase deploy --only functions
+	@echo "✅  Functions deployed"
+
+# Set the Resend API key as a Firebase secret (run once)
+# Usage: make fn-secret key=re_xxxxxxxxxxxx
+fn-secret:
+	@if [ -z "$(key)" ]; then echo "❌  Usage: make fn-secret key=re_xxxxxxxxxxxx"; exit 1; fi
+	echo "$(key)" | firebase functions:secrets:set RESEND_API_KEY
+	@echo "✅  RESEND_API_KEY secret saved to Firebase"
+
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-login fn-install fn-build fn-deploy fn-secret

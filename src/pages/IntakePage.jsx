@@ -681,6 +681,23 @@ export default function IntakePage() {
           submittedAt: serverTimestamp(),
           status:      "New",
         });
+
+        // ── Fire-and-forget: trigger confirmation emails via Cloudflare Worker ──
+        // Runs after Firestore write succeeds. We don't await the response so a
+        // Worker hiccup never blocks the thank-you screen from showing.
+        // The Worker sends: client confirmation (production only) + admin notification.
+        const MAILER_URL = import.meta.env.VITE_MAILER_URL;
+        if (MAILER_URL) {
+          fetch(MAILER_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              ...form,
+              env:         ENV,
+              submittedAt: new Date().toISOString(),
+            }),
+          }).catch(err => console.warn('[IntakePage] Mailer Worker error (non-blocking):', err));
+        }
       }
       setSubmitted(true);
     } catch (err) {

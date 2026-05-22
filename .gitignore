@@ -73,6 +73,10 @@ node_modules/
 playwright-report/
 test-results/
 
+# Cloud Functions build output
+functions/lib/
+functions/node_modules/
+
 # macOS
 .DS_Store
 
