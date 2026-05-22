@@ -56,12 +56,14 @@ export default defineConfig({
     },
   },
 
-  // Global test timeout — scales up when slowMo is active so watch mode
-  // doesn't time out mid-test (800ms × 20 actions = 16s, already over 15s)
-  timeout: slowMo ? Math.max(60_000, slowMo * 80) : 15_000,
+  // Global test timeout — fully proportional to slowMo.
+  // Formula: slowMo × 100 actions (generous upper bound for any test) + 10s buffer.
+  // Examples: speed=400 → 50s  speed=800 → 90s  speed=1500 → 160s  speed=2000 → 210s
+  timeout: slowMo ? slowMo * 100 + 10_000 : 15_000,
 
-  // Expect timeout — also loosened in watch mode
-  expect: { timeout: slowMo ? 15_000 : 4_000 },
+  // Expect timeout — proportional but smaller (single assertion, not full test)
+  // Examples: speed=400 → 9s  speed=800 → 14s  speed=1500 → 25s  speed=2000 → 32s
+  expect: { timeout: slowMo ? slowMo * 15 + 3_000 : 4_000 },
 
   projects: [
     // ── Default: Chromium desktop ───────────────────────────────────────────
