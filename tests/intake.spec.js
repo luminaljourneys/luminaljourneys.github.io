@@ -155,6 +155,9 @@ async function fillCurrentStep(page) {
     const placeholder = (await input.getAttribute('placeholder') ?? '').toLowerCase();
     const hint = `${name} ${placeholder}`;
 
+    // Skip radio and checkbox — handled separately below
+    if (type === 'radio' || type === 'checkbox') continue;
+
     if (type === 'date') {
       await input.fill('1990-01-15');
     } else if (type === 'email') {
@@ -165,7 +168,7 @@ async function fillCurrentStep(page) {
       await input.fill('Amara');
     } else if (/last.?name|lastname/i.test(hint)) {
       await input.fill('Osei');
-    } else if (/prefer|nickname|call you/i.test(hint)) {
+    } else if (/preferred.?name|call you|nickname/i.test(hint)) {
       await input.fill('Amara');
     } else if (/street|address/i.test(hint)) {
       await input.fill('123 Wellness Way');
@@ -178,6 +181,19 @@ async function fillCurrentStep(page) {
     } else {
       await input.fill('Test');
     }
+  }
+
+  // ── Radio buttons — click first visible radio per group ────────────────────
+  const radios = page.locator('input[type="radio"]');
+  const radioCount = await radios.count();
+  const handledGroups = new Set();
+  for (let i = 0; i < radioCount; i++) {
+    const radio = radios.nth(i);
+    if (!await radio.isVisible()) continue;
+    const groupName = await radio.getAttribute('name') ?? `radio-group-${i}`;
+    if (handledGroups.has(groupName)) continue;
+    handledGroups.add(groupName);
+    await radio.click();
   }
 
   const selects = page.locator('select');

@@ -63,12 +63,41 @@ const MOCK_AUTHORIZED_EDITORS = {
  *   'error': intake submit throws, error message appears.
  */
 export async function mockFirebase(page, { writeResult = 'success' } = {}) {
-  // Inject the Playwright intake test hook before the page script runs.
-  // IntakePage.jsx checks window.__pw_intake_result to bypass the Firebase
-  // WebChannel write (which cannot be intercepted at the REST layer).
-  await page.addInitScript((result) => {
-    window.__pw_intake_result = result;
-  }, writeResult);
+  // Inject all Playwright test hooks before the page script runs.
+  // Several hooks bypass Firebase WebChannel calls (onSnapshot, addDoc) that
+  // cannot be intercepted at the REST network layer in browser-mode Playwright.
+  await page.addInitScript((args) => {
+    // 1. Intake form submit result — bypasses addDoc WebChannel write.
+    //    Set to 'error' to test the error path. Checked by IntakePage.jsx.
+    window.__pw_intake_result = args.writeResult;
+
+    // 2. Intake submissions for the admin Intakes tab.
+    //    useIntakeSubmissions uses onSnapshot (WebChannel) — bypass via window flag.
+    //    Only inject if the test hasn't already set a custom value (allows
+    //    per-test override by calling addInitScript before mockFirebase).
+    if (typeof window.__pw_submissions === 'undefined') {
+      window.__pw_submissions = args.submissions;
+    }
+
+    // 3. Form config cache — bypasses the useFormConfig getDoc call that goes
+    //    through WebChannel and returns an unparseable {} from the mock.
+    //    Pre-populating localStorage makes the hook use MOCK_FIELDS immediately,
+    //    ensuring tests see a consistent form shape (no radio buttons).
+    //    Only inject if no cache exists (tests that need different configs can
+    //    pre-set localStorage before calling mockFirebase).
+    if (!localStorage.getItem('lj_form_config')) {
+      localStorage.setItem('lj_form_config', JSON.stringify({
+        data: args.formConfig,
+        expiry: Date.now() + 5 * 60 * 1000, // 5-minute TTL matches useFormConfig
+      }));
+    }
+  }, {
+    writeResult,
+    // submittedAt is epoch seconds in fixture — pass as ms so the bypass
+    // can do new Date(submittedAt) without extra conversion
+    submissions: MOCK_SUBMISSIONS.map(s => ({ ...s, submittedAt: s.submittedAt * 1000 })),
+    formConfig:  FORM_CONFIG_FIXTURE,
+  });
 
   // ── Firebase Auth: magic link OOB send ───────────────────────────────────
   await page.route('**identitytoolkit.googleapis.com/**sendOobCode**', async (route) => {

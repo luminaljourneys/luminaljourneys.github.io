@@ -29,6 +29,21 @@ export function useIntakeSubmissions() {
   const [error,   setError]   = useState(null)
 
   useEffect(() => {
+    // ── Test bypass ───────────────────────────────────────────────────────────
+    // window.__pw_submissions is injected by mock-firebase.js addInitScript.
+    // onSnapshot uses the Firestore WebChannel (gRPC-web), not the REST API,
+    // so it cannot be intercepted at the network layer in Playwright tests.
+    // Instead, we short-circuit here and return the injected fixture data.
+    if (typeof window !== 'undefined' && Array.isArray(window.__pw_submissions)) {
+      setIntakes(window.__pw_submissions.map(s => ({
+        ...s,
+        // submittedAt is injected as epoch ms (number); convert to Date for fmt()
+        submittedAt: s.submittedAt ? new Date(s.submittedAt) : null,
+      })))
+      setLoading(false)
+      return
+    }
+
     // Composite index required: env ASC + submittedAt DESC
     // Create in Firebase console if the query returns an index error.
     const q = query(

@@ -111,10 +111,10 @@ test.describe('1 — Magic link auth', () => {
   });
 
   test('magicLinkPending loading screen shows "Signing you in…" — not modal', async ({ page }) => {
-    await setup(page);
-
-    // Override the identity toolkit mock to return an authorized email
-    // so signInWithEmailLink completes successfully
+    // Register the specific signInWithEmailLink route BEFORE setup(page) registers
+    // the generic identitytoolkit mock. Playwright routes match in FIFO order —
+    // the first registered matching route wins. If we register after setup(), the
+    // generic mock would intercept first and return test@example.com (not authorized).
     await page.route('**identitytoolkit.googleapis.com/v1/accounts:signInWithEmailLink**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -122,6 +122,8 @@ test.describe('1 — Magic link auth', () => {
         body: JSON.stringify({ idToken: 'mock-token', email: 'hi@keeya.nl', localId: 'mock-uid' }),
       });
     });
+
+    await setup(page); // generic routes registered after specific one — correct priority
 
     // Pre-store the email so the magic link handler doesn't fall back to window.prompt
     await page.addInitScript(() => {
@@ -177,15 +179,18 @@ test.describe('2 — Staging edit → Publish Live', () => {
     // Navigate to Publish tab
     await page.getByRole('button', { name: /publish/i }).last().click();
 
-    // Click Publish Live
     const publishBtn = page.getByRole('button', { name: /publish live/i });
     await expect(publishBtn).toBeVisible();
+
+    // Accept the native window.confirm() dialog BEFORE clicking Publish Live.
+    // Without this, Playwright auto-dismisses the dialog (returns false)
+    // and the publish handler returns early — Publishing… never appears.
+    page.on('dialog', dialog => dialog.accept());
     await publishBtn.click();
 
-    // A confirmation dialog or "Publishing…" state should appear
-    // (the mock returns success immediately for Firestore batch writes)
-    const confirmOrPublishing = page.getByText(/publishing|confirm|are you sure/i);
-    await expect(confirmOrPublishing).toBeVisible({ timeout: 5_000 });
+    // After accepting: Firestore batch-copy runs (mock resolves instantly) →
+    // success message appears
+    await expect(page.getByText(/published successfully/i)).toBeVisible({ timeout: 8_000 });
   });
 
   test('editor display name appears in admin nav', async ({ page }) => {
@@ -220,48 +225,13 @@ test.describe('3 — Production intake → admin Intakes tab', () => {
   });
 
   test('admin sees production intake submissions in Intakes tab', async ({ page }) => {
-    // Override mock to return production submissions for this test
-    await page.route('**firestore.googleapis.com/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('intake_submissions') || url.includes('documents:runQuery')) {
-        const sv = (v) => ({ stringValue: v ?? '' });
-        const docs = MOCK_PROD_SUBMISSIONS.map(s => ({
-          name: `projects/lj/databases/(default)/documents/intake_submissions/${s.id}`,
-          fields: {
-            firstName:        sv(s.firstName),
-            lastName:         sv(s.lastName),
-            preferredName:    sv(s.preferredName),
-            dateOfBirth:      sv(s.dateOfBirth),
-            pronouns:         sv(s.pronouns),
-            email:            sv(s.email),
-            phone:            sv(s.phone),
-            address:          sv(s.address),
-            city:             sv(s.city),
-            state:            sv(s.state),
-            zip:              sv(s.zip),
-            preferredContact: sv(s.preferredContact),
-            primaryGoal:      sv(s.primaryGoal),
-            hearAboutUs:      sv(s.hearAboutUs),
-            additionalNotes:  sv(s.additionalNotes),
-            env:              sv(s.env),
-            status:           sv(s.status),
-            notes:            sv(s.notes),
-            submittedAt: { timestampValue: new Date(s.submittedAt * 1000).toISOString() },
-          },
-          createTime: '2026-01-01T00:00:00Z',
-          updateTime:  '2026-05-24T00:00:00Z',
-        }));
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(docs.map(d => ({ document: d, readTime: '2026-05-24T00:00:00Z' }))),
-        });
-        return;
-      }
-      await route.continue();
-    });
+    // Inject production submissions BEFORE mockFirebase so the bypass guard
+    // (if typeof window.__pw_submissions === 'undefined') in mockFirebase's
+    // addInitScript doesn't overwrite our value. Scripts run in registration order.
+    await page.addInitScript((subs) => {
+      window.__pw_submissions = subs;
+    }, MOCK_PROD_SUBMISSIONS.map(s => ({ ...s, submittedAt: s.submittedAt * 1000 })));
 
-    // Set up the rest of Firebase mocks and auth session
     await mockFirebase(page);
     await injectSession(page);
 
@@ -284,34 +254,10 @@ test.describe('3 — Production intake → admin Intakes tab', () => {
   });
 
   test('intake submission appears with status New in admin panel', async ({ page }) => {
-    await page.route('**firestore.googleapis.com/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('intake_submissions') || url.includes('documents:runQuery')) {
-        const sv = (v) => ({ stringValue: v ?? '' });
-        const s = MOCK_PROD_SUBMISSIONS[0];
-        const doc = {
-          name: `projects/lj/databases/(default)/documents/intake_submissions/${s.id}`,
-          fields: {
-            firstName: sv(s.firstName), lastName: sv(s.lastName),
-            preferredName: sv(s.preferredName), dateOfBirth: sv(s.dateOfBirth),
-            pronouns: sv(s.pronouns), email: sv(s.email), phone: sv(s.phone),
-            address: sv(s.address), city: sv(s.city), state: sv(s.state), zip: sv(s.zip),
-            preferredContact: sv(s.preferredContact), primaryGoal: sv(s.primaryGoal),
-            hearAboutUs: sv(s.hearAboutUs), additionalNotes: sv(s.additionalNotes),
-            env: sv(s.env), status: sv(s.status), notes: sv(s.notes),
-            submittedAt: { timestampValue: new Date(s.submittedAt * 1000).toISOString() },
-          },
-          createTime: '2026-01-01T00:00:00Z',
-          updateTime: '2026-05-24T00:00:00Z',
-        };
-        await route.fulfill({
-          status: 200, contentType: 'application/json',
-          body: JSON.stringify([{ document: doc, readTime: '2026-05-24T00:00:00Z' }]),
-        });
-        return;
-      }
-      await route.continue();
-    });
+    // Inject single production submission with status New — same bypass pattern
+    await page.addInitScript((subs) => {
+      window.__pw_submissions = subs;
+    }, [MOCK_PROD_SUBMISSIONS[0]].map(s => ({ ...s, submittedAt: s.submittedAt * 1000 })));
 
     await mockFirebase(page);
     await injectSession(page);

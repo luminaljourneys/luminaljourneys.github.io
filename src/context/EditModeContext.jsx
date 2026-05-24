@@ -76,8 +76,35 @@ const EditModeContext = createContext({
 })
 
 export function EditModeProvider({ children }) {
-  const [isEditMode,        setIsEditMode]        = useState(false)
-  const [currentUser,       setCurrentUser]       = useState(null)
+  // ── Synchronous session restore ──────────────────────────────────────────
+  // Read localStorage in the useState initializer so isEditMode / currentUser
+  // are already correct on the VERY FIRST RENDER — before any useEffect fires.
+  // This prevents AdminGate from ever mounting (and calling requestAuth →
+  // showModal = true) when a valid session exists in localStorage.
+  // Magic link URLs always take priority: don't restore a stale session
+  // on top of an incoming fresh auth flow.
+  const [isEditMode, setIsEditMode] = useState(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) return false
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const { expiry } = JSON.parse(raw)
+        if (Date.now() < expiry) return true
+      }
+    } catch { /* ignore */ }
+    return false
+  })
+  const [currentUser, setCurrentUser] = useState(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) return null
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const { expiry, user } = JSON.parse(raw)
+        if (Date.now() < expiry) return user ?? null
+      }
+    } catch { /* ignore */ }
+    return null
+  })
   const [hasFirebaseAuth,   setHasFirebaseAuth]   = useState(false) // true = Google or magic link
   const [showModal,         setShowModal]          = useState(false)
   const [onSuccess,         setOnSuccess]          = useState(null)
@@ -148,21 +175,9 @@ export function EditModeProvider({ children }) {
       return  // don't restore stale localStorage session on top of fresh auth
     }
 
-    // ── 2. Restore localStorage session (admin or previous Google/magic) ────
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const { expiry, user } = JSON.parse(raw)
-        if (Date.now() < expiry) {
-          setIsEditMode(true)
-          setCurrentUser(user ?? null)
-        } else {
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY)
-    }
+    // ── 2. No-op: localStorage session already restored synchronously ────────
+    // isEditMode and currentUser were initialized from localStorage in their
+    // useState lazy initializers above, so nothing more to do here.
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync Firebase Auth state → drives hasFirebaseAuth ────────────────────

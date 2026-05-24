@@ -1106,6 +1106,7 @@ function SignOutBtn() {
 }
 
 function Dashboard() {
+  const { currentUser } = useEditMode();
   // Support ?tab=form deep-link from Edit Form shortcut on IntakePage
   const initialTab = new URLSearchParams(window.location.search).get("tab") || "intakes";
   const [tab, setTab] = useState(initialTab);
@@ -1132,7 +1133,7 @@ function Dashboard() {
 
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "2.5rem clamp(1rem, 3vw, 2rem)" }}>
 
-        <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "2.2rem", fontWeight: 400, color: "#172f2d", marginBottom: "0.3rem" }}>Welcome back ✦</h1>
+        <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "2.2rem", fontWeight: 400, color: "#172f2d", marginBottom: "0.3rem" }}>Welcome back{currentUser?.displayName ? `, ${currentUser.displayName}` : ''} ✦</h1>
         <p style={{ fontSize: "0.9rem", color: "#89a99e", fontFamily: "var(--font-mono)", marginTop: 0, marginBottom: "2rem" }}>
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         </p>
