@@ -1116,8 +1116,9 @@ function Dashboard() {
       {/* NAV */}
       <div style={{ padding: "1rem clamp(1rem, 3vw, 2.5rem)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#172f2d", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-          <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.55rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <img src="/luminaljourneys-primary-logo-mark-gold.png" alt="Luminal Journeys" style={{ height: 24, width: "auto" }} />
+          <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <img src="/luminaljourneys-primary-logo-mark-gold.transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
+            <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.25)" }} />
             <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "rgba(249,247,244,0.95)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</span>
           </button>
           <span style={{ color: "rgba(255,255,255,0.3)" }}>|</span>
@@ -1168,7 +1169,15 @@ function Dashboard() {
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const { isEditMode } = useEditMode();
+  const { isEditMode, magicLinkPending } = useEditMode();
+  // Magic link is mid-completion — show a neutral loading screen so AdminGate
+  // doesn't flash and requestAuth() doesn't fire the login modal prematurely.
+  if (magicLinkPending) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F9F8F6", fontFamily: "'DM Sans', sans-serif", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "1.4rem", color: "#172f2d" }}>Luminal Journeys</div>
+      <div style={{ fontSize: "0.8rem", color: "#89a99e", letterSpacing: "0.1em", textTransform: "uppercase" }}>Signing you in…</div>
+    </div>
+  );
   if (!isEditMode) return <AdminGate />;
   return <Dashboard />;
 }

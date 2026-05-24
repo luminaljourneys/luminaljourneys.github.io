@@ -5,7 +5,7 @@
  * Receives intake submission data from the client (POSTed after Firestore write),
  * sends two emails via Resend:
  *   1. Client confirmation  → submitter's email  (production only)
- *   2. Admin notification   → hi@keeya.nl        (always)
+ *   2. Admin notification   → support@luminaljourneys.com (forwards to all 5 team members)
  *
  * Secret required (set once in Cloudflare dashboard → Worker → Settings → Variables):
  *   RESEND_API_KEY = re_xxxxxxxx
@@ -13,7 +13,7 @@
  * CORS: allows luminaljourneys.com, staging subdomain, and localhost dev.
  */
 
-const ADMIN_EMAIL   = 'hi@keeya.nl';
+const ADMIN_EMAIL   = 'support@luminaljourneys.com';
 const FROM_EMAIL    = 'Luminal Journeys <hello@luminaljourneys.com>';
 const RESEND_API    = 'https://api.resend.com/emails';
 

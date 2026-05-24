@@ -60,18 +60,19 @@ const EDITOR_NAMES = {
 }
 
 const EditModeContext = createContext({
-  isEditMode:       false,
-  currentUser:      null,
-  hasFirebaseAuth:  false,
-  requestAuth:      () => {},
-  unlock:           () => false,
-  lock:             () => {},
-  signOutFully:     async () => {},
-  signInWithGoogle: async () => ({ error: null }),
-  sendMagicLink:    async () => ({ error: null }),
-  recordSave:       () => {},
-  showModal:        false,
-  dismissModal:     () => {},
+  isEditMode:        false,
+  currentUser:       null,
+  hasFirebaseAuth:   false,
+  magicLinkPending:  false,
+  requestAuth:       () => {},
+  unlock:            () => false,
+  lock:              () => {},
+  signOutFully:      async () => {},
+  signInWithGoogle:  async () => ({ error: null }),
+  sendMagicLink:     async () => ({ error: null }),
+  recordSave:        () => {},
+  showModal:         false,
+  dismissModal:      () => {},
 })
 
 export function EditModeProvider({ children }) {
@@ -84,6 +85,12 @@ export function EditModeProvider({ children }) {
   const [warnCountdown,     setWarnCountdown]      = useState(WARN_SECS)
   const inactivityTimer  = useRef(null)
   const countdownTimer   = useRef(null)
+
+  // True while an incoming magic link is being processed — prevents AdminGate
+  // from firing requestAuth() and showing the modal before the async completes.
+  const [magicLinkPending, setMagicLinkPending] = useState(
+    () => isSignInWithEmailLink(auth, window.location.href)
+  )
 
   // ── Restore session on mount ─────────────────────────────────────────────
   useEffect(() => {
@@ -113,6 +120,7 @@ export function EditModeProvider({ children }) {
             if (!authorized.includes(rawEmail)) {
               await signOut(auth)
               console.warn('[EditMode] Magic link — email not authorized:', rawEmail)
+              setMagicLinkPending(false)
               return
             }
 
@@ -127,11 +135,15 @@ export function EditModeProvider({ children }) {
             }))
             setCurrentUser(user)
             setIsEditMode(true)
+            setMagicLinkPending(false)
           })
           .catch(e => {
             console.error('[EditMode] Magic link completion error:', e.code, e.message)
             localStorage.removeItem(MAGIC_EMAIL_KEY)
+            setMagicLinkPending(false)
           })
+      } else {
+        setMagicLinkPending(false)
       }
       return  // don't restore stale localStorage session on top of fresh auth
     }
@@ -299,11 +311,14 @@ export function EditModeProvider({ children }) {
   // ── Show the login modal ──────────────────────────────────────────────────
   const requestAuth = useCallback((cb) => {
     if (isEditMode) { cb?.(); return }
+    // Magic link is still completing — don't interrupt with the login modal.
+    // isEditMode will flip to true once the async resolves, which unmounts AdminGate.
+    if (magicLinkPending) return
     // Firebase Auth session still alive → re-enter instantly, no modal
     if (currentUser && hasFirebaseAuth) { setIsEditMode(true); cb?.(); return }
     setOnSuccess(() => cb ?? null)
     setShowModal(true)
-  }, [isEditMode, currentUser, hasFirebaseAuth])
+  }, [isEditMode, currentUser, hasFirebaseAuth, magicLinkPending])
 
   // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
   // MUST be declared before `lock` — lock's dependency array references it,
@@ -397,6 +412,7 @@ export function EditModeProvider({ children }) {
       isEditMode,
       currentUser,
       hasFirebaseAuth,
+      magicLinkPending,
       showModal,
       requestAuth,
       unlock,

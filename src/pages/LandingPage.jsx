@@ -38,10 +38,10 @@ function Wordmark({ color = B.deep, size = "1rem" }) {
   );
 }
 
-function LogoMark({ size = 32 }) {
+function LogoMark({ size = 60 }) {
   return (
     <img
-      src="/luminaljourneys-primary-logo-mark-gold.png"
+      src="/luminaljourneys-primary-logo-mark-gold.transparent.png"
       alt="Luminal Journeys"
       style={{ height: size, width: "auto", display: "block" }}
     />
@@ -114,8 +114,9 @@ export default function LandingPage() {
         borderBottom: scrolled ? `1px solid ${B.rule}` : "none",
         transition: "all 0.3s"
       }}>
-        <div data-testid="nav-logo" style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <LogoMark size={mobile ? 24 : 28} />
+        <div data-testid="nav-logo" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <LogoMark size={60} />
+          <div style={{ width: 1, height: 32, background: B.rule }} />
           <Wordmark color={B.deep} size={mobile ? "0.72rem" : "0.85rem"} />
         </div>
         {!mobile && (
@@ -348,7 +349,8 @@ export default function LandingPage() {
         gap: "1rem", flexWrap: "wrap",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <LogoMark size={20} />
+          <LogoMark size={48} />
+          <div style={{ width: 1, height: 28, background: B.rule }} />
           <Wordmark color={B.deep} size="0.75rem" />
         </div>
 
