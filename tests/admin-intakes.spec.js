@@ -16,16 +16,17 @@ import { test, expect } from '@playwright/test';
 import { mockFirebase, waitForApp } from './helpers/mock-firebase.js';
 import { MOCK_SUBMISSIONS } from './fixtures/intake-submissions.js';
 
-// ── Auth helper — mock the editor email so AdminPage lets us in ─────────────
+// ── Auth helper — inject a valid localStorage session so AdminPage renders Dashboard ──
+// EditModeContext restores isEditMode from localStorage on mount (the same path
+// a real magic-link or password sign-in uses). window.__pw_mock_user is NOT
+// read by the app — localStorage injection is the correct bypass.
 async function mockAuth(page) {
-  // Inject a fake Firebase user that matches an authorized editor email.
-  // EditModeContext reads window.__pw_mock_user when present.
   await page.addInitScript(() => {
-    window.__pw_mock_user = {
-      email: 'keeya@springsparrowhousing.com',
-      displayName: 'Keeya',
-      uid: 'mock-uid',
-    };
+    const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    localStorage.setItem('lj_edit_session', JSON.stringify({
+      expiry: Date.now() + SESSION_MS,
+      user: { displayName: 'Keeya', email: 'hi@keeya.nl', photoURL: null },
+    }));
   });
 }
 

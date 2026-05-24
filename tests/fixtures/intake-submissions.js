@@ -1,12 +1,15 @@
 /**
  * fixtures/intake-submissions.js — Luminal Journeys
  *
- * Mock intake_submissions documents used by admin-intakes.spec.js.
- * Mirrors the shape written by IntakePage.jsx handleSubmit.
+ * Mock intake_submissions documents used by admin-intakes.spec.js and
+ * e2e-workflow.spec.js. Mirrors the shape written by IntakePage.jsx handleSubmit.
  *
  * submittedAt is stored as a Firestore Timestamp in production;
  * the mock helper in mock-firebase.js wraps it as integerValue seconds
  * so the client SDK converts it back to a Date correctly.
+ *
+ * MOCK_SUBMISSIONS      — env:'staging'  (used by admin tests running in staging env)
+ * MOCK_PROD_SUBMISSIONS — env:'production' (used by E2E workflow tests)
  */
 
 export const MOCK_SUBMISSIONS = [
@@ -55,5 +58,42 @@ export const MOCK_SUBMISSIONS = [
     status: 'Scheduled',
     notes: '',
     submittedAt: 1773273600,
+  },
+];
+
+// ── Production submissions — env:'production' ─────────────────────────────────
+// Used by e2e-workflow.spec.js to verify the admin Intakes tab shows
+// production data when the production bundle is served.
+
+export const MOCK_PROD_SUBMISSIONS = [
+  {
+    id: 'prod-001',
+    firstName: 'Jordan',  lastName: 'Park',    preferredName: 'Jordan',
+    dateOfBirth: '1988-07-30', pronouns: 'They / Them',
+    email: 'jordan.park@example.com', phone: '555-987-6543',
+    address: '22 Sunrise Blvd', city: 'Oakland', state: 'CA', zip: '94612',
+    preferredContact: 'Email',
+    primaryGoal: 'Stress & Anxiety Management',
+    hearAboutUs: 'Instagram',
+    additionalNotes: 'Interested in integrative care.',
+    env: 'production',
+    status: 'New',
+    notes: '',
+    submittedAt: 1773532800, // 2026-03-14
+  },
+  {
+    id: 'prod-002',
+    firstName: 'Maya',    lastName: 'Chen',    preferredName: 'Maya',
+    dateOfBirth: '1995-02-18', pronouns: 'She / Her',
+    email: 'maya.chen@example.com', phone: '555-456-7890',
+    address: '88 Harbor St', city: 'San Francisco', state: 'CA', zip: '94107',
+    preferredContact: 'Phone',
+    primaryGoal: 'Hormonal Balance',
+    hearAboutUs: 'Friend or Family',
+    additionalNotes: '',
+    env: 'production',
+    status: 'New',
+    notes: '',
+    submittedAt: 1773446400, // 2026-03-13
   },
 ];
