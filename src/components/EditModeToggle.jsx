@@ -54,8 +54,8 @@ function EditModeToggleInner() {
           <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '0.2rem 0' }} />
           {/* Exit Edit Mode — keeps session alive for quick re-entry */}
           <ToolbarBtn icon="↙" label="Exit Edit Mode" onClick={lock} muted />
-          {/* Sign Out — ends session fully */}
-          <ToolbarBtn icon="⏻" label="Sign Out" onClick={signOutFully} muted />
+          {/* Sign Out — ends session fully, returns to public site */}
+          <ToolbarBtn icon="⏻" label="Sign Out" onClick={async () => { await signOutFully(); navigate('/') }} muted />
         </div>
       ) : hasSession ? (
         // ── Session alive but viewing — show Resume + Sign Out ────────────

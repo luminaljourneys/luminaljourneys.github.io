@@ -16,12 +16,13 @@ import { db } from '../firebase'
 import { useEditMode } from '../context/EditModeContext.jsx'
 import { usePublish } from '../hooks/usePublish.js'
 import { IS_STAGING, SITE_CONFIG_COLL, SITE_META_DOC } from '../lib/collections'
+import { navigate } from '../App.jsx'
 import NotePanel from './NotePanel.jsx'
 
 const EDIT_ENABLED = import.meta.env.VITE_EDIT_MODE_ENABLED !== 'false'
 
 export default function StagingBanner() {
-  const { isEditMode, currentUser, lock } = useEditMode()
+  const { isEditMode, currentUser, lock, signOutFully } = useEditMode()
   const { publish, publishing, lastPublished, error } = usePublish()
   const [showConfirm,  setShowConfirm]  = useState(false)
   const [showSuccess,  setShowSuccess]  = useState(false)
@@ -127,7 +128,7 @@ export default function StagingBanner() {
             fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase',
             padding: '0.2rem 0.5rem', borderRadius: '0.25rem', fontWeight: 700,
             flexShrink: 0,
-          }}>Staging</span>
+          }}>Admin</span>
 
           {saveMeta?.lastSavedBy ? (
             <span style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -190,7 +191,7 @@ export default function StagingBanner() {
                 {currentUser.displayName}
               </span>
               <button
-                onClick={lock}
+                onClick={async () => { await signOutFully(); navigate('/') }}
                 title="Sign out"
                 style={{
                   background: 'none', border: 'none',

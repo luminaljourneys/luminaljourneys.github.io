@@ -2,8 +2,10 @@
  * useIntakeSubmissions.js — Luminal Journeys
  *
  * Real-time Firestore listener for intake_submissions.
- * Filters by current ENV (staging | production) so admins always see
- * the right environment's data without a collection-per-env split.
+ * Shows ALL submissions regardless of environment so the admin panel at
+ * admin.luminaljourneys.com can see both real client submissions
+ * (env='production' from luminaljourneys.com) and staging/QA submissions.
+ * The env column in the table indicates which domain each came from.
  *
  * Returns:
  *   intakes        — sorted array of submission objects (newest first)
@@ -15,11 +17,10 @@
 
 import { useState, useEffect } from 'react'
 import {
-  collection, query, where, orderBy,
+  collection, query, orderBy,
   onSnapshot, doc, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { ENV } from '../lib/collections'
 
 const INTAKE_COLL = 'intake_submissions'
 
@@ -44,11 +45,10 @@ export function useIntakeSubmissions() {
       return
     }
 
-    // Composite index required: env ASC + submittedAt DESC
-    // Create in Firebase console if the query returns an index error.
+    // No env filter — admin sees all submissions (production + staging).
+    // Single-field index on submittedAt is auto-created by Firestore.
     const q = query(
       collection(db, INTAKE_COLL),
-      where('env', '==', ENV),
       orderBy('submittedAt', 'desc'),
     )
 
