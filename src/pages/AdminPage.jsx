@@ -73,7 +73,24 @@ function AdminGate() {
 }
 
 // ─── Tab: Intakes ─────────────────────────────────────────────────────────────
+// Shell component: waits for Firebase Auth to be established before mounting
+// IntakesData. This prevents useIntakeSubmissions from running before auth is
+// ready, which would cause a permission-denied Firestore error. Both Magic Link
+// sessions (hasFirebaseAuth=true immediately) and password sessions
+// (hasFirebaseAuth becomes true after signInAnonymously completes) are handled.
 function IntakesTab() {
+  const { hasFirebaseAuth } = useEditMode();
+
+  if (!hasFirebaseAuth) return (
+    <div style={{ minHeight: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#89a99e", fontFamily: "var(--font-mono)", fontSize: "0.82rem" }}>
+      Loading submissions…
+    </div>
+  );
+
+  return <IntakesData />;
+}
+
+function IntakesData() {
   const { intakes, loading, error, updateStatus, updateNotes } = useIntakeSubmissions();
   const [search, setSearch]   = useState("");
   const [expanded, setExpanded] = useState(null);

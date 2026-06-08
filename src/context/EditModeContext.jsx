@@ -29,6 +29,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   signOut,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
@@ -212,6 +213,9 @@ export function EditModeProvider({ children }) {
     if (username === 'admin' && password === correct) {
       const user = { displayName: 'Admin', email: 'admin', photoURL: null }
       startSession(user)
+      // Sign in anonymously so Firestore rules (request.auth != null) pass
+      // for admin reads — intake submissions, etc. — even in password mode.
+      signInAnonymously(auth).catch(() => {})
       onSuccess?.()
       setOnSuccess(null)
       return true
