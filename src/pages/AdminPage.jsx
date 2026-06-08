@@ -332,12 +332,18 @@ function FieldRow({ field, idx, isLast, onReorder, onDelete, onUpdate, showToast
   const saveEdit = async () => {
     if (!draft.label.trim()) return;
     setSaving(true);
-    const name = draft.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-    await onUpdate(field.id, { ...draft, name });
-    setSaving(false);
-    setEditing(false);
-    setDraft(null);
-    showToast("Field saved to Firebase");
+    try {
+      const name = draft.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      await onUpdate(field.id, { ...draft, name });
+      setEditing(false);
+      setDraft(null);
+      showToast("Field saved to Firebase");
+    } catch (err) {
+      console.error('[AdminPage] Field save failed:', err?.code, err?.message)
+      showToast("Save failed — check permissions");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const typeMeta = FIELD_TYPE_META[field.type] || { label: field.type, icon: "Aa", hasOptions: false, isInput: true };
@@ -511,13 +517,18 @@ function FormBuilderTab() {
   const handleAddField = async () => {
     if (!newField.label.trim()) return;
     setSaving(true);
-    const name = newField.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-    // Statement fields are never required and never half-width
-    const isStatement = newField.type === "statement";
-    await addField({ ...newField, step: activeStep, name, required: isStatement ? false : newField.required, halfWidth: isStatement ? false : newField.halfWidth });
-    setNewField(EMPTY_FIELD);
-    setSaving(false);
-    showToast("Field added ✦ saved to Firebase");
+    try {
+      const name = newField.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      const isStatement = newField.type === "statement";
+      await addField({ ...newField, step: activeStep, name, required: isStatement ? false : newField.required, halfWidth: isStatement ? false : newField.halfWidth });
+      setNewField(EMPTY_FIELD);
+      showToast("Field added ✦ saved to Firebase");
+    } catch (err) {
+      console.error('[AdminPage] Add field failed:', err?.code, err?.message)
+      showToast("Save failed — check permissions");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteField = async (fieldId, deletable) => {
@@ -537,10 +548,16 @@ function FormBuilderTab() {
   const handleSaveStep = async () => {
     if (!editingStep || !editingStep.title.trim()) return;
     setSavingStep(true);
-    await updateStep(steps[editingStep.idx].id, { title: editingStep.title, description: editingStep.description });
-    setSavingStep(false);
-    setEditingStep(null);
-    showToast("Step saved to Firebase");
+    try {
+      await updateStep(steps[editingStep.idx].id, { title: editingStep.title, description: editingStep.description });
+      setEditingStep(null);
+      showToast("Step saved to Firebase");
+    } catch (err) {
+      console.error('[AdminPage] Step save failed:', err?.code, err?.message)
+      showToast("Save failed — check permissions");
+    } finally {
+      setSavingStep(false);
+    }
   };
 
   const handleDeleteStep = async (idx) => {
@@ -822,11 +839,17 @@ function PageRow({ page, idx, isLast, onReorder, onDelete, onUpdate, showToast }
   const saveEdit = async () => {
     if (!draft.title.trim()) return;
     setSaving(true);
-    await onUpdate(page.id, draft);
-    setSaving(false);
-    setEditing(false);
-    setDraft(null);
-    showToast(`"${draft.title}" saved to Firebase`);
+    try {
+      await onUpdate(page.id, draft);
+      setEditing(false);
+      setDraft(null);
+      showToast(`"${draft.title}" saved to Firebase`);
+    } catch (err) {
+      console.error('[AdminPage] Page save failed:', err?.code, err?.message)
+      showToast("Save failed — check permissions");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const wordCount = (page.body || "").trim().split(/\s+/).filter(Boolean).length;

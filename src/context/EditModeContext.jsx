@@ -29,7 +29,8 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
@@ -67,7 +68,7 @@ const EditModeContext = createContext({
   hasFirebaseAuth:   false,
   magicLinkPending:  false,
   requestAuth:       () => {},
-  unlock:            () => false,
+  unlock:            async () => false,
   lock:              () => {},
   signOutFully:      async () => {},
   signInWithGoogle:  async () => ({ error: null }),
@@ -216,14 +217,34 @@ export function EditModeProvider({ children }) {
   }, [])
 
   // ── Password login (admin / QA path) ─────────────────────────────────────
-  const unlock = useCallback((username, password) => {
+  // Uses a dedicated Firebase Auth account (admin@luminaljourneys.com) so that
+  // Firestore rules (isAuthorizedEditor → email in authorized_editors) pass for
+  // intake reads. Anonymous auth has no email and is therefore rejected by rules.
+  const ADMIN_EMAIL = 'admin@luminaljourneys.com'
+  const unlock = useCallback(async (username, password) => {
     const correct = import.meta.env.VITE_EDIT_PASSWORD ?? 'luminal2026'
     if (username === 'admin' && password === correct) {
       const user = { displayName: 'Admin', email: 'admin', photoURL: null }
       startSession(user)
-      // Sign in anonymously so Firestore rules (request.auth != null) pass
-      // for admin reads — intake submissions, etc. — even in password mode.
-      signInAnonymously(auth).catch(() => {})
+      // Sign in with a real Firebase email/password account so the Firestore
+      // isAuthorizedEditor() check passes (requires request.auth.token.email).
+      // On first use, auto-create the account; subsequent logins just sign in.
+      try {
+        await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password)
+      } catch (e) {
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          // First-time setup: bootstrap the admin Firebase Auth account
+          try {
+            await createUserWithEmailAndPassword(auth, ADMIN_EMAIL, password)
+            console.log('[EditMode] Admin Firebase account created:', ADMIN_EMAIL)
+          } catch (createErr) {
+            // email-already-in-use means wrong password; all other errors log only
+            console.error('[EditMode] Admin account error:', createErr.code, createErr.message)
+          }
+        } else {
+          console.error('[EditMode] Admin sign-in error:', e.code, e.message)
+        }
+      }
       onSuccess?.()
       setOnSuccess(null)
       return true
@@ -477,10 +498,10 @@ function LoginModal() {
   const [linkSent,    setLinkSent]    = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
 
-  const handlePassword = (e) => {
+  const handlePassword = async (e) => {
     e.preventDefault()
     setPwError('')
-    const ok = unlock(username, password)
+    const ok = await unlock(username, password)
     if (!ok) setPwError('Incorrect credentials.')
   }
 

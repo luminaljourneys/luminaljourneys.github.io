@@ -111,9 +111,14 @@ function InlineFieldEditor({ field, onSave, onCancel, onDelete, isNew = false })
   const handleSave = async () => {
     if (!draft.label.trim()) return;
     setSaving(true);
-    const name = draft.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-    await onSave({ ...draft, name });
-    setSaving(false);
+    try {
+      const name = draft.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      await onSave({ ...draft, name });
+    } catch (err) {
+      console.error('[IntakePage] Field save failed:', err?.code, err?.message)
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

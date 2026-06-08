@@ -29,13 +29,24 @@ service cloud.firestore {
           && request.auth.token.email != null;
     }
 
+    // ── Helper: the admin@luminaljourneys.com service account ────────────────
+    // Used by the password-login ("admin" / VITE_EDIT_PASSWORD) path.
+    // Hardcoded so it bypasses the Firestore authorized_editors lookup —
+    // no need to add it to the list manually in the Console.
+    function isAdminServiceAccount() {
+      return request.auth != null
+          && request.auth.token.email == 'admin@luminaljourneys.com';
+    }
+
     // ── Helper: signed-in AND email is in the authorized_editors list ────────
     // This check runs server-side on every write — cannot be bypassed from client.
+    // Admin service account is always considered an authorized editor.
     function isAuthorizedEditor() {
-      return isSignedIn()
-          && exists(/databases/$(database)/documents/site_config/authorized_editors)
-          && request.auth.token.email in
-             get(/databases/$(database)/documents/site_config/authorized_editors).data.emails;
+      return isAdminServiceAccount()
+          || (isSignedIn()
+              && exists(/databases/$(database)/documents/site_config/authorized_editors)
+              && request.auth.token.email in
+                 get(/databases/$(database)/documents/site_config/authorized_editors).data.emails);
     }
 
     // ── site_config/meta ─────────────────────────────────────────────────────
