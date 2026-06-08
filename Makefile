@@ -16,6 +16,10 @@
 #   make fn-deploy              → build + deploy functions to Firebase
 #   make fn-secret              → set POSTMARK_API_KEY secret (run once)
 #
+# FIREBASE / GCP ACCOUNT CHECK (run at the start of any session):
+#   make firebase-check         → show active Firebase + gcloud account + project
+#   make firebase-fix           → switch gcloud to hi@keeya.nl for this project
+#
 # WIF / GCP DIAGNOSTICS (run when GitHub Actions deploy fails):
 #   make wif-check              → show current WIF provider config + repo condition
 #   make wif-fix                → repair provider condition to scope it to this repo
@@ -230,6 +234,43 @@ git-test:
 	@echo "── Testing SSH auth to GitHub with $(LJ_KEY) ───────────────"
 	ssh -T -i $(LJ_KEY) -o IdentitiesOnly=yes git@github.com 2>&1 || true
 
+# ── Firebase / GCP Account Check ─────────────────────────────────────────────
+# Run this at the start of any session that touches Firebase or GCP.
+# Expected: Firebase → hi@keeya.nl  |  gcloud → hi@keeya.nl  |  project → luminaljourneys
+# Usage: make firebase-check
+EXPECTED_ACCOUNT := hi@keeya.nl
+
+firebase-check:
+	@echo "── Firebase CLI ────────────────────────────────────────────"
+	@firebase login:list 2>/dev/null || echo "(firebase CLI not logged in — run: firebase login)"
+	@echo ""
+	@echo "── Active Firebase project ─────────────────────────────────"
+	@firebase use 2>/dev/null || echo "(no project selected — run: firebase use luminaljourneys)"
+	@echo ""
+	@echo "── gcloud active account ───────────────────────────────────"
+	@ACTIVE=$$(gcloud config get-value account 2>/dev/null); \
+	echo "  $$ACTIVE"; \
+	if [ "$$ACTIVE" = "$(EXPECTED_ACCOUNT)" ]; then \
+		echo "  ✅  Correct account ($(EXPECTED_ACCOUNT))"; \
+	else \
+		echo "  ⚠️   Wrong account! Expected $(EXPECTED_ACCOUNT)"; \
+		echo "  Run: make firebase-fix"; \
+	fi
+	@echo ""
+	@echo "── gcloud active project ───────────────────────────────────"
+	@gcloud config get-value project 2>/dev/null
+
+# Switch gcloud to the correct account for this project.
+# Usage: make firebase-fix
+firebase-fix:
+	@echo "🔧  Switching gcloud to $(EXPECTED_ACCOUNT) / $(GCP_PROJECT)..."
+	gcloud config set account $(EXPECTED_ACCOUNT)
+	gcloud config set project $(GCP_PROJECT)
+	@echo "✅  Done. Verify with: make firebase-check"
+	@echo ""
+	@echo "If hi@keeya.nl is not in your gcloud accounts list, run:"
+	@echo "  gcloud auth login"
+
 # ── WIF / GCP Diagnostics ─────────────────────────────────────────────────────
 
 # Show the current WIF provider config — what repo condition is it scoped to?
@@ -286,4 +327,4 @@ redeploy:
 	git push origin $(BRANCH)
 	@echo "✅  CI triggered — watch Actions at https://github.com/$(GITHUB_REPO)/actions"
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-email qa-login firestore-deploy fn-install fn-build fn-deploy fn-secret git-check git-fix git-test wif-whoami wif-check wif-fix redeploy
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-email qa-login firestore-deploy fn-install fn-build fn-deploy fn-secret git-check git-fix git-test firebase-check firebase-fix wif-whoami wif-check wif-fix redeploy
