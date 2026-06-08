@@ -1113,10 +1113,10 @@ const TABS = [
 ];
 
 function SignOutBtn() {
-  const { lock } = useEditMode();
+  const { signOutFully } = useEditMode();
   return (
     <button
-      onClick={() => { lock(); navigate("/"); }}
+      onClick={async () => { await signOutFully(); navigate("/"); }}
       style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)", padding: "0.4rem 1.1rem", borderRadius: "2rem", cursor: "pointer", fontSize: "0.78rem" }}
     >Sign Out</button>
   );
