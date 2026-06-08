@@ -231,18 +231,26 @@ export function EditModeProvider({ children }) {
       // On first use, auto-create the account; subsequent logins just sign in.
       try {
         await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password)
-      } catch (e) {
-        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-          // First-time setup: bootstrap the admin Firebase Auth account
+        console.log('[EditMode] Admin signed in:', ADMIN_EMAIL)
+      } catch (signInErr) {
+        // Sign-in failed — user probably doesn't exist yet. Attempt first-time creation.
+        // Don't gate on a specific error code — SDK versions vary (user-not-found vs
+        // invalid-credential); just try create and handle the result.
+        console.log('[EditMode] Admin sign-in failed, attempting account creation:', signInErr.code)
+        if (signInErr.code !== 'auth/wrong-password' && signInErr.code !== 'auth/too-many-requests') {
           try {
             await createUserWithEmailAndPassword(auth, ADMIN_EMAIL, password)
-            console.log('[EditMode] Admin Firebase account created:', ADMIN_EMAIL)
+            console.log('[EditMode] Admin Firebase account created and signed in:', ADMIN_EMAIL)
           } catch (createErr) {
-            // email-already-in-use means wrong password; all other errors log only
-            console.error('[EditMode] Admin account error:', createErr.code, createErr.message)
+            if (createErr.code === 'auth/email-already-in-use') {
+              // Account exists — sign-in failed due to wrong password or stale state
+              console.error('[EditMode] Admin account exists but sign-in failed. Password mismatch?')
+            } else {
+              console.error('[EditMode] Admin account creation failed:', createErr.code, createErr.message)
+            }
           }
         } else {
-          console.error('[EditMode] Admin sign-in error:', e.code, e.message)
+          console.error('[EditMode] Admin sign-in blocked:', signInErr.code)
         }
       }
       onSuccess?.()
