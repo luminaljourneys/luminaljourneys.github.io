@@ -20,6 +20,11 @@
 #   make wif-check              → show current WIF provider config + repo condition
 #   make wif-fix                → repair provider condition to scope it to this repo
 #   make redeploy               → force-push an empty commit to re-trigger CI
+#
+# GIT ACCOUNT DIAGNOSTICS (run when push fails with "Permission denied to BridgeLogicsProjects"):
+#   make git-check              → show git remote + which SSH key this repo uses
+#   make git-fix                → wire this repo to use the luminaljourneys SSH key
+#   make git-test               → verify SSH auth is working as luminaljourneys
 # ─────────────────────────────────────────────────────────────────────────────
 
 ROOT    := $(shell pwd)
@@ -184,6 +189,47 @@ fn-secret:
 	echo "$(key)" | firebase functions:secrets:set POSTMARK_API_KEY
 	@echo "✅  POSTMARK_API_KEY secret saved to Firebase"
 
+# ── Git Account Diagnostics ───────────────────────────────────────────────────
+#
+# Root cause: macOS SSH agent loads the BridgeLogicsProjects key first.
+# Fix: tell THIS repo's git to always use the luminaljourneys SSH key explicitly.
+#
+# SSH key for the luminaljourneys GitHub account.
+# Override if your key is named differently: make git-fix LJ_KEY=~/.ssh/id_rsa_lj
+LJ_KEY ?= ~/.ssh/id_ed25519_luminal
+
+# Show what SSH identity git is using for this repo.
+# Run first when push fails with "Permission denied to BridgeLogicsProjects".
+# Usage: make git-check
+git-check:
+	@echo "── Git remote ──────────────────────────────────────────────"
+	@git remote -v
+	@echo ""
+	@echo "── SSH command for this repo (local git config) ─────────────"
+	@git config --local core.sshCommand 2>/dev/null || echo "(none — using system SSH agent default)"
+	@echo ""
+	@echo "── SSH agent identities currently loaded ────────────────────"
+	@ssh-add -l 2>/dev/null || echo "(no identities in agent)"
+
+# Wire this repo to always use the luminaljourneys SSH key.
+# Writes core.sshCommand into .git/config (local only — does not affect other repos).
+# Usage: make git-fix
+git-fix:
+	@echo "🔧  Wiring repo to use $(LJ_KEY)..."
+	git config core.sshCommand "ssh -i $(LJ_KEY) -o IdentitiesOnly=yes"
+	@echo "✅  Done. Verify with: make git-test"
+	@echo ""
+	@echo "If the key doesn't exist yet, create it:"
+	@echo "  ssh-keygen -t ed25519 -C 'luminaljourneys-github' -f $(LJ_KEY)"
+	@echo "  Then add the public key at: github.com → luminaljourneys account → Settings → SSH Keys"
+
+# Dry-run SSH auth against GitHub using the luminaljourneys key.
+# A successful result looks like: Hi <username>! You've successfully authenticated...
+# Usage: make git-test
+git-test:
+	@echo "── Testing SSH auth to GitHub with $(LJ_KEY) ───────────────"
+	ssh -T -i $(LJ_KEY) -o IdentitiesOnly=yes git@github.com 2>&1 || true
+
 # ── WIF / GCP Diagnostics ─────────────────────────────────────────────────────
 
 # Show the current WIF provider config — what repo condition is it scoped to?
@@ -240,4 +286,4 @@ redeploy:
 	git push origin $(BRANCH)
 	@echo "✅  CI triggered — watch Actions at https://github.com/$(GITHUB_REPO)/actions"
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-email qa-login firestore-deploy fn-install fn-build fn-deploy fn-secret wif-whoami wif-check wif-fix redeploy
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-email qa-login firestore-deploy fn-install fn-build fn-deploy fn-secret git-check git-fix git-test wif-whoami wif-check wif-fix redeploy
