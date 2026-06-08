@@ -15,8 +15,12 @@ import { useState } from 'react'
 import { useEditMode } from '../context/EditModeContext'
 import { navigate } from '../App.jsx'
 import PencilIcon from './PencilIcon'
+import { IS_STAGING } from '../lib/collections'
 
-const EDIT_MODE_ENABLED = import.meta.env.VITE_EDIT_MODE_ENABLED !== 'false'
+// Double-gated: both the env flag AND the IS_STAGING check must pass.
+// This ensures the edit toolbar NEVER appears on luminaljourneys.com even
+// if VITE_EDIT_MODE_ENABLED is missing from the production secrets.
+const EDIT_MODE_ENABLED = import.meta.env.VITE_EDIT_MODE_ENABLED !== 'false' && IS_STAGING
 
 export default function EditModeToggle() {
   if (!EDIT_MODE_ENABLED) return null

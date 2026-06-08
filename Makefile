@@ -55,14 +55,14 @@ build:
 # ── Git / Deploy ─────────────────────────────────────────────────────────────
 
 # Commit + push to dev branch → triggers staging deploy via GitHub Actions
-# QA at: https://luminaljourneys-staging.web.app
+# QA at: https://admin.luminaljourneys.com  (also: https://luminaljourneys-staging.web.app)
 # Usage: make staging m="feat: add form builder rating field"
 staging:
 	@if [ -z "$(m)" ]; then echo "❌  Usage: make staging m=\"your commit message\""; exit 1; fi
 	git add .
 	git commit -m "$(m)"
 	git push origin dev
-	@echo "✅  Pushed to staging — https://luminaljourneys-staging.web.app"
+	@echo "✅  Pushed to admin — https://admin.luminaljourneys.com"
 
 # Alias for backwards compat
 stage: staging

@@ -10,7 +10,7 @@
  *   1. Mocked (default / CI) — intercepts the Firestore POST and inspects
  *      the request body before it leaves the browser. Fast and deterministic.
  *
- *   2. Live staging (opt-in) — runs against staging.luminaljourneys.com,
+ *   2. Live staging (opt-in) — runs against admin.luminaljourneys.com,
  *      lets the real addDoc fire, then queries Firestore via the REST API
  *      (using FIREBASE_API_KEY env var) to confirm the document landed.
  *      Run with: INTAKE_E2E_LIVE=1 FIREBASE_API_KEY=xxx npx playwright test
@@ -65,7 +65,7 @@ async function setupPage(page) {
 
     await page.goto('/intake');
   } else {
-    await page.goto('https://staging.luminaljourneys.com/intake');
+    await page.goto('https://admin.luminaljourneys.com/intake');
   }
 
   await waitForApp(page);
@@ -324,7 +324,7 @@ test.describe('Intake — full client journey (mocked)', () => {
 // ── Live Firestore verification (staging) ─────────────────────────────────────
 //
 // Runs only when INTAKE_E2E_LIVE=1 is set.
-// Submits a real form to staging.luminaljourneys.com, then queries Firestore
+// Submits a real form to admin.luminaljourneys.com, then queries Firestore
 // via the REST API to confirm the document landed in intake_submissions.
 //
 // Required env vars:
@@ -351,7 +351,7 @@ test.describe('Intake — live Firestore verification (staging)', () => {
     const testEmail = `playwright+${Date.now()}@luminaljourneys-test.com`;
 
     // ── 1. Submit the real form on staging ───────────────────────────────────
-    await page.goto('https://staging.luminaljourneys.com/intake');
+    await page.goto('https://admin.luminaljourneys.com/intake');
     await waitForApp(page);
 
     // Step 0
@@ -459,7 +459,7 @@ test.describe('Intake — live Firestore verification (staging)', () => {
     const startTime        = new Date();
 
     // ── 1. Submit real form with maildrop email ──────────────────────────────
-    await page.goto('https://staging.luminaljourneys.com/intake');
+    await page.goto('https://admin.luminaljourneys.com/intake');
     await waitForApp(page);
 
     // Form fields load from Firestore async — wait for inputs to actually render

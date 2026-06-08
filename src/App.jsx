@@ -13,6 +13,7 @@ import BrandKitPage from "./brand/BrandKitPage";
 import DynamicPage from "./pages/DynamicPage.jsx";
 import StagingBanner from "./components/StagingBanner.jsx";
 import EditModeToggle from "./components/EditModeToggle.jsx";
+import { IS_STAGING } from "./lib/collections.js";
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export function navigate(to) {
@@ -38,6 +39,9 @@ function useRoute() {
   return path.replace(base, "").replace(/\/$/, "").toLowerCase() || "/";
 }
 
+// admin.luminaljourneys.com always serves the admin panel — no /admin path needed.
+const IS_ADMIN_DOMAIN = window.location.hostname === 'admin.luminaljourneys.com';
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const route = useRoute();
@@ -47,6 +51,12 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", "A");
   }, []);
 
+  // admin.luminaljourneys.com root → AdminPage directly, no /admin path needed.
+  // /admin on admin domain also works but clean URL is just admin.luminaljourneys.com
+  if (IS_ADMIN_DOMAIN && (route === "/" || route === "/admin")) {
+    return <AdminPage />;
+  }
+
   if (route === "/intake") return (
     <>
       <StagingBanner />
@@ -55,8 +65,17 @@ export default function App() {
     </>
   );
 
-  if (route === "/admin")  return <AdminPage />;
-  if (route === "/brand")  return <BrandKitPage />;
+  if (route === "/admin") {
+    // On production (luminaljourneys.com): redirect to the admin domain.
+    // luminaljourneys.com/admin → admin.luminaljourneys.com
+    if (!IS_STAGING) {
+      window.location.replace("https://admin.luminaljourneys.com");
+      return null;
+    }
+    return <AdminPage />;
+  }
+
+  if (route === "/brand") return <BrandKitPage />;
 
   // Dynamic pages — any /slug that doesn't match a code route
   if (route !== "/" && route.startsWith("/") && !route.includes(".")) {

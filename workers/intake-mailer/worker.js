@@ -10,7 +10,7 @@
  * Secret required (set once in Cloudflare dashboard → Worker → Settings → Variables):
  *   POSTMARK_API_KEY = xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
  *
- * CORS: allows luminaljourneys.com, staging subdomain, and localhost dev.
+ * CORS: allows luminaljourneys.com, admin subdomain, and localhost dev.
  */
 
 const ADMIN_EMAIL    = 'hello@luminaljourneys.com';  // ImprovMX forwards to all 5 admin team members
@@ -21,8 +21,9 @@ const POSTMARK_API   = 'https://api.postmarkapp.com/email';
 const ALLOWED_ORIGINS = [
   'https://luminaljourneys.com',
   'https://www.luminaljourneys.com',
-  'https://staging.luminaljourneys.com',
-  'https://luminaljourneys-staging.web.app',
+  'https://admin.luminaljourneys.com',       // primary admin/edit domain
+  'https://staging.luminaljourneys.com',     // kept during DNS transition — remove after cutover
+  'https://luminaljourneys-staging.web.app', // Firebase default URL (always keep)
   'http://localhost:5173',
   'http://localhost:4173',
 ];
@@ -232,7 +233,7 @@ function adminEmailHtml(d) {
       </tr>`).join('')}
     </table>
     <div style="margin-top:28px;text-align:center;">
-      <a href="https://luminaljourneys.com/admin"
+      <a href="https://admin.luminaljourneys.com"
         style="display:inline-block;background:#172f2d;color:#fff;text-decoration:none;border-radius:6px;padding:12px 28px;font-size:14px;font-weight:500;">
         Open Admin Panel →
       </a>

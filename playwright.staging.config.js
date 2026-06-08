@@ -1,7 +1,7 @@
 // playwright.staging.config.js — Luminal Journeys
 //
 // Live staging config for E2E tests that hit real Firebase.
-// No Vite dev server — tests run directly against staging.luminaljourneys.com.
+// No Vite dev server — tests run directly against admin.luminaljourneys.com.
 //
 // Required env vars:
 //   INTAKE_E2E_LIVE=1          — enables live Firestore writes in intake-e2e.spec.js
@@ -37,7 +37,7 @@ export default defineConfig({
 
   use: {
     // All tests navigate to staging — setupPage() handles the goto() internally
-    baseURL: 'https://staging.luminaljourneys.com',
+    baseURL: 'https://admin.luminaljourneys.com',
 
     // Full trace on live runs — invaluable for debugging real Firebase failures
     trace: 'on',
@@ -67,5 +67,5 @@ export default defineConfig({
     },
   ],
 
-  // No webServer — staging.luminaljourneys.com is already live
+  // No webServer — admin.luminaljourneys.com is already live
 });

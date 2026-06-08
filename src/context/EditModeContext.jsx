@@ -39,6 +39,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import {
+  IS_STAGING,
   SITE_CONFIG_COLL,
   AUTHORIZED_EDITORS_DOC,
   SITE_META_DOC,
@@ -85,6 +86,12 @@ export function EditModeProvider({ children }) {
   // Magic link URLs always take priority: don't restore a stale session
   // on top of an incoming fresh auth flow.
   const [isEditMode, setIsEditMode] = useState(() => {
+    // Production: editing only happens on admin.luminaljourneys.com.
+    // Clear any stale localStorage sessions so edit UI never leaks to public visitors.
+    if (!IS_STAGING) {
+      localStorage.removeItem(STORAGE_KEY)
+      return false
+    }
     if (isSignInWithEmailLink(auth, window.location.href)) return false
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -96,6 +103,7 @@ export function EditModeProvider({ children }) {
     return false
   })
   const [currentUser, setCurrentUser] = useState(() => {
+    if (!IS_STAGING) return null
     if (isSignInWithEmailLink(auth, window.location.href)) return null
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
