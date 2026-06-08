@@ -3,19 +3,20 @@
  * Luminal Journeys
  *
  * Receives intake submission data from the client (POSTed after Firestore write),
- * sends two emails via Resend:
+ * sends two emails via Postmark:
  *   1. Client confirmation  → submitter's email  (production only)
  *   2. Admin notification   → support@luminaljourneys.com (forwards to all 5 team members)
  *
  * Secret required (set once in Cloudflare dashboard → Worker → Settings → Variables):
- *   RESEND_API_KEY = re_xxxxxxxx
+ *   POSTMARK_API_KEY = xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
  *
  * CORS: allows luminaljourneys.com, staging subdomain, and localhost dev.
  */
 
-const ADMIN_EMAIL   = 'support@luminaljourneys.com';
-const FROM_EMAIL    = 'Luminal Journeys <hello@luminaljourneys.com>';
-const RESEND_API    = 'https://api.resend.com/emails';
+const ADMIN_EMAIL    = 'hello@luminaljourneys.com';  // ImprovMX forwards to all 5 admin team members
+const SUPPORT_EMAIL  = 'support@luminaljourneys.com'; // goes to clients@getbridgelogics.com (BridgeLogics DevOps only)
+const FROM_EMAIL     = 'Luminal Journeys <hello@luminaljourneys.com>';
+const POSTMARK_API   = 'https://api.postmarkapp.com/email';
 
 const ALLOWED_ORIGINS = [
   'https://luminaljourneys.com',
@@ -55,18 +56,20 @@ export default {
       return jsonResponse({ ok: false, error: 'Missing required fields: email, firstName' }, 400, origin);
     }
 
-    const key = env.RESEND_API_KEY;
+    const key = env.POSTMARK_API_KEY;
     if (!key) {
-      return jsonResponse({ ok: false, error: 'RESEND_API_KEY not configured' }, 500, origin);
+      return jsonResponse({ ok: false, error: 'POSTMARK_API_KEY not configured' }, 500, origin);
     }
 
     // ── Send emails ─────────────────────────────────────────────────────────
     try {
       const isProduction = data.env === 'production';
+      // Allow test inboxes (maildrop.cc) to receive client confirmation on any env
+      const isTestEmail   = typeof data.email === 'string' && data.email.endsWith('@maildrop.cc');
       const results = [];
 
-      // 1. Client confirmation — production submissions only
-      if (isProduction) {
+      // 1. Client confirmation — production always; staging if maildrop.cc test address
+      if (isProduction || isTestEmail) {
         const clientRes = await sendEmail(key, {
           from:    FROM_EMAIL,
           to:      data.email,
@@ -80,7 +83,7 @@ export default {
       const adminRes = await sendEmail(key, {
         from:    FROM_EMAIL,
         to:      ADMIN_EMAIL,
-        subject: `[${(data.env || 'unknown').toUpperCase()}] New intake — ${data.firstName} ${data.lastName}`,
+        subject: `[LUMINAL JOURNEYS] [${(data.env || 'unknown').toUpperCase()}] New intake — ${data.firstName} ${data.lastName}`,
         html:    adminEmailHtml(data),
       });
       results.push({ type: 'admin', status: adminRes.status });
@@ -94,20 +97,27 @@ export default {
   },
 };
 
-// ── Resend API call ───────────────────────────────────────────────────────────
+// ── Postmark API call ─────────────────────────────────────────────────────────
 
 async function sendEmail(apiKey, payload) {
-  const res = await fetch(RESEND_API, {
+  const res = await fetch(POSTMARK_API, {
     method:  'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type':  'application/json',
+      'X-Postmark-Server-Token': apiKey,
+      'Content-Type':            'application/json',
+      'Accept':                  'application/json',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      From:          payload.from,
+      To:            payload.to,
+      Subject:       payload.subject,
+      HtmlBody:      payload.html,
+      MessageStream: 'outbound',
+    }),
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Resend ${res.status}: ${body}`);
+    throw new Error(`Postmark ${res.status}: ${body}`);
   }
   return res;
 }

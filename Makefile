@@ -14,11 +14,24 @@
 #   make fn-install             → npm install inside functions/
 #   make fn-build               → compile TypeScript → lib/
 #   make fn-deploy              → build + deploy functions to Firebase
-#   make fn-secret              → set RESEND_API_KEY secret (run once)
+#   make fn-secret              → set POSTMARK_API_KEY secret (run once)
+#
+# WIF / GCP DIAGNOSTICS (run when GitHub Actions deploy fails):
+#   make wif-check              → show current WIF provider config + repo condition
+#   make wif-fix                → repair provider condition to scope it to this repo
+#   make redeploy               → force-push an empty commit to re-trigger CI
 # ─────────────────────────────────────────────────────────────────────────────
 
 ROOT    := $(shell pwd)
 BRANCH  := $(shell git rev-parse --abbrev-ref HEAD)
+
+# ── GCP / WIF identity — scoped to Luminal Journeys only ────────────────────
+GCP_PROJECT     := luminaljourneys
+GCP_PROJECT_NUM := 815989961728
+GITHUB_ORG      := luminaljourneys
+GITHUB_REPO     := luminaljourneys/luminaljourneys.github.io
+WIF_POOL        := github-pool
+WIF_PROVIDER    := github-provider
 
 # ── Local development ────────────────────────────────────────────────────────
 
@@ -122,10 +135,30 @@ qa-file:
 qa-staging:
 	cd $(ROOT) && npx playwright test --config=playwright.staging.config.js --project=chromium
 
+# Live end-to-end: fill real staging form + verify email lands in maildrop.cc inbox
+# Requires: EMAIL_E2E=1, INTAKE_E2E_LIVE=1
+# Usage: make qa-email mb=kwj
+mb ?= kwj
+qa-email:
+	cd $(ROOT) && INTAKE_E2E_LIVE=1 EMAIL_E2E=1 MAILDROP_MAILBOX=$(mb) \
+		npx playwright test tests/intake-e2e.spec.js \
+		--config=playwright.staging.config.js \
+		--grep "confirmation email" \
+		--project=chromium-staging
+
 # Run login tests only against local dev server
 # Usage: make qa-login
 qa-login:
 	cd $(ROOT) && npx playwright test tests/login.spec.js --project=chromium
+
+# ── Cloud Functions ───────────────────────────────────────────────────────────
+
+# Deploy Firestore rules + indexes (run whenever firestore.rules or
+# firestore.indexes.json changes — GitHub Actions does NOT do this automatically)
+# Usage: make firestore-deploy
+firestore-deploy:
+	firebase deploy --only firestore:rules,firestore:indexes --project $(GCP_PROJECT)
+	@echo "✅  Firestore rules + indexes deployed"
 
 # ── Cloud Functions ───────────────────────────────────────────────────────────
 
@@ -143,11 +176,68 @@ fn-deploy:
 	firebase deploy --only functions
 	@echo "✅  Functions deployed"
 
-# Set the Resend API key as a Firebase secret (run once)
-# Usage: make fn-secret key=re_xxxxxxxxxxxx
+# Set the Postmark API key as a Firebase secret (run once, if using Cloud Functions)
+# Note: production secret lives in Cloudflare Worker settings, not Firebase
+# Usage: make fn-secret key=your-postmark-server-token
 fn-secret:
-	@if [ -z "$(key)" ]; then echo "❌  Usage: make fn-secret key=re_xxxxxxxxxxxx"; exit 1; fi
-	echo "$(key)" | firebase functions:secrets:set RESEND_API_KEY
-	@echo "✅  RESEND_API_KEY secret saved to Firebase"
+	@if [ -z "$(key)" ]; then echo "❌  Usage: make fn-secret key=your-postmark-server-token"; exit 1; fi
+	echo "$(key)" | firebase functions:secrets:set POSTMARK_API_KEY
+	@echo "✅  POSTMARK_API_KEY secret saved to Firebase"
 
-.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-login fn-install fn-build fn-deploy fn-secret
+# ── WIF / GCP Diagnostics ─────────────────────────────────────────────────────
+
+# Show the current WIF provider config — what repo condition is it scoped to?
+# Run this first when a deploy fails with "Error creating token" or permission denied.
+# Usage: make wif-check
+wif-check:
+	@echo "── WIF provider config for $(GCP_PROJECT) ──────────────────"
+	gcloud iam workload-identity-pools providers describe $(WIF_PROVIDER) \
+		--workload-identity-pool=$(WIF_POOL) \
+		--location=global \
+		--project=$(GCP_PROJECT) \
+		--format="yaml(attributeCondition,attributeMapping,oidc.issuerUri)"
+	@echo ""
+	@echo "── IAM binding check — is this repo bound to the service account? ──"
+	gcloud iam service-accounts get-iam-policy \
+		$$(gcloud iam service-accounts list --project=$(GCP_PROJECT) --filter="displayName:github" --format="value(email)" | head -1) \
+		--project=$(GCP_PROJECT) \
+		--format="yaml(bindings)" 2>/dev/null || \
+		gcloud iam service-accounts list --project=$(GCP_PROJECT) --format="table(email,displayName)"
+
+# Show active gcloud account + IAM roles on this project.
+# Run before wif-fix to confirm you're logged in as the right account.
+# Usage: make wif-whoami
+wif-whoami:
+	@echo "── Active gcloud account ───────────────────────────────────"
+	@gcloud config get-value account
+	@echo ""
+	@echo "── Your IAM roles on $(GCP_PROJECT) ────────────────────────"
+	@gcloud projects get-iam-policy $(GCP_PROJECT) \
+		--flatten="bindings[].members" \
+		--filter="bindings.members:$$(gcloud config get-value account)" \
+		--format="table(bindings.role)"
+	@echo ""
+	@echo "Need roles/iam.workloadIdentityPoolAdmin to run wif-fix."
+	@echo "If missing, run: gcloud auth login  (in your terminal, not make)"
+
+# Repair the WIF provider: scope its attribute condition to THIS repo only.
+# Run this after wif-check confirms the condition is wrong (e.g. points to purrfect-sort).
+# Usage: make wif-fix
+wif-fix:
+	@echo "🔧  Scoping WIF provider to $(GITHUB_REPO)..."
+	gcloud iam workload-identity-pools providers update-oidc $(WIF_PROVIDER) \
+		--workload-identity-pool=$(WIF_POOL) \
+		--location=global \
+		--project=$(GCP_PROJECT) \
+		--attribute-condition="attribute.repository=='$(GITHUB_REPO)'"
+	@echo "✅  Provider condition updated. Verify with: make wif-check"
+
+# Force a redeploy by pushing an empty commit — useful after wif-fix.
+# Usage: make redeploy
+redeploy:
+	@echo "🚀  Force-pushing empty commit to re-trigger CI on $(BRANCH)..."
+	git commit --allow-empty -m "ops: force redeploy"
+	git push origin $(BRANCH)
+	@echo "✅  CI triggered — watch Actions at https://github.com/$(GITHUB_REPO)/actions"
+
+.PHONY: dev install build staging stage prod ship commit qa qa-all qa-ui qa-watch qa-report qa-file qa-staging qa-email qa-login firestore-deploy fn-install fn-build fn-deploy fn-secret wif-whoami wif-check wif-fix redeploy

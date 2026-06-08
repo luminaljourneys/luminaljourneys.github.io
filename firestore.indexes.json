@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "intake_submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "env",         "order": "ASCENDING"  },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "intake_submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "env",         "order": "ASCENDING"  },
+        { "fieldPath": "status",      "order": "ASCENDING"  },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

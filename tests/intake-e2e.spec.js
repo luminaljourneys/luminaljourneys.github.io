@@ -450,6 +450,105 @@ test.describe('Intake — live Firestore verification (staging)', () => {
     await apiContext.dispose();
   });
 
+  test('confirmation email arrives at maildrop.cc inbox', async ({ page }) => {
+    test.skip(!process.env.EMAIL_E2E, 'Set EMAIL_E2E=1 to run live email delivery check');
+
+    const MAILDROP_MAILBOX = process.env.MAILDROP_MAILBOX ?? 'kwj';
+    const MAILDROP_EMAIL   = `${MAILDROP_MAILBOX}@maildrop.cc`;
+    const MAILDROP_API     = 'https://api.maildrop.cc/graphql';
+    const startTime        = new Date();
+
+    // ── 1. Submit real form with maildrop email ──────────────────────────────
+    await page.goto('https://staging.luminaljourneys.com/intake');
+    await waitForApp(page);
+
+    // Form fields load from Firestore async — wait for inputs to actually render
+    // before filling, otherwise fillCurrentStep fills nothing and canAdvance stays false
+    await expect(page.getByTestId('btn-continue')).toBeVisible({ timeout: 20_000 });
+    await page.waitForSelector('input:visible', { timeout: 15_000 });
+
+    // Step 0 — Personal Info
+    await fillCurrentStep(page);
+    await advance(page);
+
+    // Step 1 — Contact Info
+    // fillCurrentStep first (triggers React state for all fields), then
+    // override email with maildrop address
+    await page.waitForSelector('input:visible', { timeout: 10_000 });
+    await fillCurrentStep(page);
+    await page.locator('input[type="email"]').fill(MAILDROP_EMAIL);
+    await advance(page);
+
+    // Step 2 — About You
+    await page.waitForSelector('input:visible, select:visible, textarea:visible', { timeout: 10_000 });
+    await fillCurrentStep(page);
+    await advance(page);
+
+    // Confirm + submit
+    // Intercept the Worker call so we can log its response for diagnostics
+    let workerResponse = null;
+    page.on('response', async (resp) => {
+      if (resp.url().includes('workers.dev') || resp.url().includes('intake-mailer')) {
+        try {
+          const body = await resp.json();
+          workerResponse = { status: resp.status(), body };
+          console.log(`[worker] ${resp.url()} → ${resp.status()} ${JSON.stringify(body)}`);
+        } catch {
+          workerResponse = { status: resp.status(), body: await resp.text().catch(() => '(unreadable)') };
+          console.log(`[worker] ${resp.url()} → ${resp.status()} (non-JSON)`);
+        }
+      }
+    });
+
+    await expect(page.getByTestId('btn-submit')).toBeVisible({ timeout: 8_000 });
+    await page.getByTestId('btn-submit').click();
+    await expect(page.getByTestId('thank-you')).toBeVisible({ timeout: 15_000 });
+
+    // Give the fire-and-forget Worker call a moment to complete
+    await page.waitForTimeout(3_000);
+
+    if (!workerResponse) {
+      console.warn('[worker] ⚠️ No Worker response captured — VITE_MAILER_URL may not be set in the staging build');
+    } else if (workerResponse.status !== 200) {
+      console.error('[worker] ❌ Worker returned error:', workerResponse);
+    } else {
+      console.log('[worker] ✅ Worker responded OK:', workerResponse.body);
+    }
+
+    console.log('[email-e2e] ✅ Form submitted — waiting for email...');
+
+    // ── 2. Poll maildrop.cc until confirmation email arrives ─────────────────
+    const apiContext = await request.newContext();
+    const deadline   = Date.now() + 90_000; // 90s max
+    let   email      = null;
+
+    while (Date.now() < deadline) {
+      const res = await apiContext.post(MAILDROP_API, {
+        data: { query: `{ inbox(mailbox: "${MAILDROP_MAILBOX}") { id headerfrom subject date } }` },
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json     = await res.json();
+      const messages = json?.data?.inbox ?? [];
+
+      email = messages.find(m => {
+        const receivedAt   = new Date(m.date);
+        const subjectMatch = m.subject?.toLowerCase().includes('luminal') ||
+                             m.subject?.toLowerCase().includes('intake') ||
+                             m.subject?.toLowerCase().includes('received');
+        return subjectMatch && receivedAt > startTime;
+      });
+
+      if (email) break;
+      console.log(`[maildrop] ${messages.length} messages in inbox — no match yet, retrying in 5s...`);
+      await page.waitForTimeout(5_000);
+    }
+
+    await apiContext.dispose();
+
+    expect(email, 'Confirmation email should arrive within 90 seconds').toBeTruthy();
+    console.log(`[email-e2e] ✅ Email arrived: "${email.subject}" from ${email.headerfrom}`);
+  });
+
   test('production form submission lands in production collection', async ({ page }) => {
     test.skip(!process.env.RUN_PROD_CHECK, 'Set RUN_PROD_CHECK=1 to verify production Firestore');
 
