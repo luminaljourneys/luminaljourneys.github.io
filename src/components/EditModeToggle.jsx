@@ -51,6 +51,7 @@ function EditModeToggleInner() {
           <ToolbarBtn icon="✎" label="Form Builder" onClick={() => navigate('/admin?tab=form')} />
           <ToolbarBtn icon="☰" label="Pages"        onClick={() => navigate('/admin?tab=pages')} />
           <ToolbarBtn icon="⬆" label="Publish"      onClick={() => navigate('/admin?tab=publish')} />
+          <ToolbarBtn icon="⌂" label="← View Site"   onClick={() => navigate('/')} />
           <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '0.2rem 0' }} />
           {/* Exit Edit Mode — keeps session alive for quick re-entry */}
           <ToolbarBtn icon="↙" label="Exit Edit Mode" onClick={lock} muted />

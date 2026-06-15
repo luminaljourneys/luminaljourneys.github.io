@@ -13,8 +13,11 @@
  * CORS: allows luminaljourneys.com, admin subdomain, and localhost dev.
  */
 
-const ADMIN_EMAIL    = 'hello@luminaljourneys.com';  // ImprovMX forwards to all 5 admin team members
-const SUPPORT_EMAIL  = 'support@luminaljourneys.com'; // goes to clients@getbridgelogics.com (BridgeLogics DevOps only)
+// Email routing — clean separation of concerns:
+//   hello@    → client-facing FROM address + client confirmation TO address
+//   intakes@  → admin notification TO address (ImprovMX → all admin users)
+//              This avoids the hello→hello self-loop that ImprovMX drops.
+const ADMIN_NOTIFICATION_EMAIL = 'intakes@luminaljourneys.com';
 const FROM_EMAIL     = 'Luminal Journeys <hello@luminaljourneys.com>';
 const POSTMARK_API   = 'https://api.postmarkapp.com/email';
 
@@ -81,13 +84,16 @@ export default {
       }
 
       // 2. Admin notification — always (staging + production)
-      const adminRes = await sendEmail(key, {
+      // Sent to intakes@luminaljourneys.com (not hello@) to avoid ImprovMX self-loop.
+      // ImprovMX forwards intakes@ to all admin users.
+      const envTag    = (data.env || 'unknown').toUpperCase();
+      const adminRes  = await sendEmail(key, {
         from:    FROM_EMAIL,
-        to:      ADMIN_EMAIL,
-        subject: `[LUMINAL JOURNEYS] [${(data.env || 'unknown').toUpperCase()}] New intake — ${data.firstName} ${data.lastName}`,
+        to:      ADMIN_NOTIFICATION_EMAIL,
+        subject: `[LUMINAL JOURNEYS] [${envTag}] New intake — ${data.firstName} ${data.lastName}`,
         html:    adminEmailHtml(data),
       });
-      results.push({ type: 'admin', status: adminRes.status });
+      results.push({ type: 'admin', to: ADMIN_NOTIFICATION_EMAIL, status: adminRes.status });
 
       return jsonResponse({ ok: true, results }, 200, origin);
 
