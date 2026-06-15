@@ -111,14 +111,16 @@ function EditModeToggleInner() {
               </button>
             </div>
 
-            {/* Intakes — with live count badge */}
+            {/* Intakes — with live count badge → admin dashboard */}
             <ToolbarBtn
               icon="📥"
               label="Intakes"
               onClick={() => navigate('/admin?tab=intakes')}
               badge={intakeCount}
             />
-            <ToolbarBtn icon="✎" label="Form Builder" onClick={() => navigate('/admin?tab=form')} />
+            {/* Form Builder → live intake form for in-place editing */}
+            <ToolbarBtn icon="✎" label="Form Builder" onClick={() => navigate('/intake')} />
+            {/* Pages / Publish → admin dashboard tabs */}
             <ToolbarBtn icon="☰" label="Pages"        onClick={() => navigate('/admin?tab=pages')} />
             <ToolbarBtn icon="⬆" label="Publish"      onClick={() => navigate('/admin?tab=publish')} />
             <ToolbarBtn icon="⌂" label="← View Site"  onClick={() => navigate('/')} />

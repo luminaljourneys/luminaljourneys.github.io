@@ -1147,9 +1147,20 @@ function SignOutBtn() {
 
 function Dashboard() {
   const { currentUser } = useEditMode();
-  // Support ?tab=form deep-link from Edit Form shortcut on IntakePage
-  const initialTab = new URLSearchParams(window.location.search).get("tab") || "intakes";
-  const [tab, setTab] = useState(initialTab);
+  // Support ?tab=X deep-links from the EditModeToggle toolbar and IntakePage.
+  // Listens to routechange so toolbar navigation updates the active tab
+  // without a full page reload (navigate() uses pushState, not a hard nav).
+  const getTabFromURL = () => new URLSearchParams(window.location.search).get("tab") || "intakes";
+  const [tab, setTab] = useState(getTabFromURL);
+  useEffect(() => {
+    const handler = () => setTab(getTabFromURL());
+    window.addEventListener("routechange", handler);
+    window.addEventListener("popstate",    handler);
+    return () => {
+      window.removeEventListener("routechange", handler);
+      window.removeEventListener("popstate",    handler);
+    };
+  }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: "#F9F8F6", fontFamily: "'DM Sans', sans-serif" }}>
