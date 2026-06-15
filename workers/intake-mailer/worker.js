@@ -152,42 +152,108 @@ function jsonResponse(body, status, origin) {
 
 // ── Email templates ───────────────────────────────────────────────────────────
 
+// Shared branded header: dark green bar with logo mark + wordmark
+// Uses hosted PNG assets from luminaljourneys.com (public, no auth needed).
+// Inline alt text renders in clients that block images.
+function emailHeader() {
+  return `
+  <tr>
+    <td style="background:#172f2d;padding:24px 32px;text-align:center;">
+      <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="vertical-align:middle;padding-right:12px;">
+            <img
+              src="https://luminaljourneys.com/luminaljourneys-primary-logo-mark-gold.transparent.png"
+              alt="Luminal Journeys"
+              width="40" height="40"
+              style="display:block;border:0;height:40px;width:auto;"
+            />
+          </td>
+          <td style="vertical-align:middle;border-left:1px solid rgba(255,255,255,0.2);padding-left:12px;">
+            <div style="font-family:Georgia,'DM Serif Display',serif;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#e6ddd0;white-space:nowrap;">Luminal Journeys</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>`;
+}
+
+// Shared footer
+function emailFooter() {
+  return `
+  <tr>
+    <td style="background:#172f2d;padding:16px 32px;text-align:center;">
+      <p style="font-size:11px;color:#89a99e;margin:0;letter-spacing:0.06em;">
+        © 2026 LUMINAL JOURNEYS &nbsp;·&nbsp; <a href="https://luminaljourneys.com" style="color:#89a99e;text-decoration:none;">luminaljourneys.com</a>
+      </p>
+    </td>
+  </tr>`;
+}
+
 function clientEmailHtml(d) {
   const name = d.preferredName || d.firstName;
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F9F8F6;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F8F6;padding:48px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e0d8;">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>We received your intake form</title>
+</head>
+<body style="margin:0;padding:0;background:#F9F8F6;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F9F8F6;padding:40px 0;">
+<tr><td align="center" style="padding:0 16px;">
+<table role="presentation" width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
 
-  <tr><td style="background:#172f2d;padding:32px 40px;text-align:center;">
-    <div style="font-family:Georgia,serif;font-size:22px;color:#e6ddd0;letter-spacing:0.04em;">Luminal Journeys</div>
-  </td></tr>
+  <!-- Logo header -->
+  ${emailHeader()}
 
-  <tr><td style="padding:40px 40px 32px;">
-    <p style="font-size:26px;font-weight:600;color:#172f2d;margin:0 0 16px;">Thank you, ${name}. ✦</p>
-    <p style="font-size:16px;color:#4a5568;line-height:1.7;margin:0 0 24px;">
-      We've received your intake form and will be in touch within
-      <strong>1–2 business days</strong> to schedule your first appointment.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0"
-      style="background:#F9F8F6;border-radius:8px;border:1px solid #e5e0d8;margin:0 0 28px;">
-      <tr><td style="padding:20px 24px;">
-        ${summaryRow('Primary Goal',      d.primaryGoal      || '—')}
-        ${summaryRow('Preferred Contact', d.preferredContact || '—')}
-        ${summaryRow('Email',             d.email)}
-        ${d.phone ? summaryRow('Phone', d.phone) : ''}
-      </td></tr>
-    </table>
-    <p style="font-size:14px;color:#89a99e;line-height:1.6;margin:0;">
-      Questions before your appointment? Simply reply to this email.
-    </p>
-  </td></tr>
+  <!-- Main content — cream background, opposite of header -->
+  <tr>
+    <td style="background:#FDFCFA;padding:40px 36px 32px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;">
 
-  <tr><td style="background:#F9F8F6;border-top:1px solid #e5e0d8;padding:20px 40px;text-align:center;">
-    <p style="font-size:12px;color:#89a99e;margin:0;letter-spacing:0.05em;">© 2026 LUMINAL JOURNEYS · All rights reserved</p>
-  </td></tr>
+      <p style="font-family:Georgia,serif;font-size:24px;font-weight:400;color:#172f2d;margin:0 0 8px;line-height:1.3;">
+        Thank you, ${name}. ✦
+      </p>
+      <p style="font-size:15px;color:#5a6e6b;line-height:1.75;margin:0 0 28px;">
+        We've received your intake form and will be in touch within
+        <strong style="color:#172f2d;">1–2 business days</strong>
+        to schedule your first appointment.
+      </p>
+
+      <!-- Summary card -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+        style="background:#F0EDE8;border-radius:8px;margin:0 0 28px;">
+        <tr><td style="padding:20px 24px;">
+          ${summaryRow('Primary Goal',      d.primaryGoal      || '—')}
+          ${summaryRow('Preferred Contact', d.preferredContact || '—')}
+          ${summaryRow('Email',             d.email)}
+          ${d.phone ? summaryRow('Phone', d.phone) : ''}
+        </td></tr>
+      </table>
+
+      <p style="font-size:14px;color:#89a99e;line-height:1.65;margin:0 0 28px;">
+        Questions before your appointment? Simply reply to this email —
+        we're happy to help.
+      </p>
+
+      <!-- CTA -->
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="border-radius:6px;background:#bf8a3e;">
+            <a href="https://luminaljourneys.com"
+              style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;letter-spacing:0.02em;font-family:Helvetica,Arial,sans-serif;">
+              Visit luminaljourneys.com
+            </a>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  ${emailFooter()}
 
 </table>
 </td></tr>
@@ -207,7 +273,7 @@ function adminEmailHtml(d) {
     ['Preferred Name',    d.preferredName    || '—'],
     ['Date of Birth',     d.dateOfBirth      || '—'],
     ['Pronouns',          d.pronouns         || '—'],
-    ['Email',             `<a href="mailto:${d.email}" style="color:#2E7D7F;">${d.email}</a>`],
+    ['Email',             `<a href="mailto:${d.email}" style="color:#2d6a4f;font-weight:500;">${d.email}</a>`],
     ['Phone',             d.phone            || '—'],
     ['Address',           address],
     ['Preferred Contact', d.preferredContact || '—'],
@@ -219,36 +285,61 @@ function adminEmailHtml(d) {
   ];
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#F9F8F6;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F8F6;padding:40px 0;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e0d8;">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>New Intake — ${fullName}</title>
+</head>
+<body style="margin:0;padding:0;background:#F9F8F6;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F9F8F6;padding:40px 0;">
+<tr><td align="center" style="padding:0 16px;">
+<table role="presentation" width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0">
 
-  <tr><td style="background:#172f2d;padding:24px 32px;">
-    <div style="font-size:11px;letter-spacing:0.12em;color:#89a99e;text-transform:uppercase;margin-bottom:4px;">New Intake Submission</div>
-    <div style="font-size:20px;font-weight:600;color:#e6ddd0;">${fullName}</div>
-  </td></tr>
+  <!-- Logo header -->
+  ${emailHeader()}
 
-  <tr><td style="padding:24px 32px;">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      ${rows.map(([label, val]) => `
-      <tr>
-        <td style="padding:8px 0;border-bottom:1px solid #f0ece6;width:38%;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#89a99e;vertical-align:top;padding-right:16px;">${label}</td>
-        <td style="padding:8px 0;border-bottom:1px solid #f0ece6;font-size:14px;color:#172f2d;">${val}</td>
-      </tr>`).join('')}
-    </table>
-    <div style="margin-top:28px;text-align:center;">
-      <a href="https://admin.luminaljourneys.com"
-        style="display:inline-block;background:#172f2d;color:#fff;text-decoration:none;border-radius:6px;padding:12px 28px;font-size:14px;font-weight:500;">
-        Open Admin Panel →
-      </a>
-    </div>
-  </td></tr>
+  <!-- Tag strip: NEW INTAKE SUBMISSION + client name — cream, opposite of header -->
+  <tr>
+    <td style="background:#FDFCFA;padding:20px 32px 16px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;border-bottom:1px solid #e8e3db;">
+      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#89a99e;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif;">
+        New Intake Submission
+      </div>
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:#172f2d;line-height:1.2;">
+        ${fullName}
+      </div>
+      <div style="font-size:12px;color:#89a99e;margin-top:4px;">${submitted}</div>
+    </td>
+  </tr>
 
-  <tr><td style="background:#F9F8F6;border-top:1px solid #e5e0d8;padding:16px 32px;text-align:center;">
-    <p style="font-size:11px;color:#89a99e;margin:0;letter-spacing:0.05em;">LUMINAL JOURNEYS · Automated notification</p>
-  </td></tr>
+  <!-- Data rows — white content block -->
+  <tr>
+    <td style="background:#fff;padding:24px 32px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${rows.map(([label, val]) => `
+        <tr>
+          <td style="padding:9px 0;border-bottom:1px solid #f0ece6;width:36%;font-size:10px;letter-spacing:0.09em;text-transform:uppercase;color:#89a99e;vertical-align:top;padding-right:16px;font-family:Helvetica,Arial,sans-serif;">${label}</td>
+          <td style="padding:9px 0;border-bottom:1px solid #f0ece6;font-size:14px;color:#172f2d;line-height:1.5;font-family:Helvetica,Arial,sans-serif;">${val}</td>
+        </tr>`).join('')}
+      </table>
+
+      <!-- CTA -->
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+        <tr>
+          <td style="border-radius:6px;background:#172f2d;">
+            <a href="https://admin.luminaljourneys.com"
+              style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;letter-spacing:0.02em;font-family:Helvetica,Arial,sans-serif;">
+              Open Admin Panel →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  ${emailFooter()}
 
 </table>
 </td></tr>
@@ -257,8 +348,9 @@ function adminEmailHtml(d) {
 }
 
 function summaryRow(label, value) {
-  return `<div style="margin-bottom:10px;">
-    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#89a99e;margin-bottom:2px;">${label}</div>
-    <div style="font-size:14px;color:#172f2d;">${value}</div>
+  return `
+  <div style="margin-bottom:12px;">
+    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#89a99e;margin-bottom:3px;font-family:Helvetica,Arial,sans-serif;">${label}</div>
+    <div style="font-size:14px;color:#172f2d;font-family:Helvetica,Arial,sans-serif;">${value}</div>
   </div>`;
 }
