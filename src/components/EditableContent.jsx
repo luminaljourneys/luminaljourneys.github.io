@@ -34,6 +34,12 @@ export default function EditableContent({
 
   // ── View mode — zero overhead ─────────────────────────────────────────────
   if (!isEditMode) {
+    // While content is null (Firestore fetch in-flight), render the tag with
+    // visibility:hidden so layout space is reserved but no text is visible.
+    // This eliminates the flash of stale hardcoded fallback text on page load.
+    if (content === null) {
+      return <Tag className={className} style={{ ...style, visibility: 'hidden' }} {...rest}>&nbsp;</Tag>
+    }
     return <Tag className={className} style={style} {...rest}>{content}</Tag>
   }
 
