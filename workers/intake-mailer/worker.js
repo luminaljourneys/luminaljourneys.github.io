@@ -220,23 +220,29 @@ function clientEmailHtml(d) {
 <tr><td align="center" style="padding:0 16px;">
 <table role="presentation" width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
 
-  <!-- Logo header -->
+  <!-- Branded header: dark green, logo mark + rule + wordmark -->
   ${emailHeader()}
 
-  <!-- Main content — cream background, opposite of header -->
+  <!-- Greeting strip — sits directly below header, same dark green, client's name -->
   <tr>
-    <td style="background:#FDFCFA;padding:40px 36px 32px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;">
-
-      <p style="font-family:Georgia,serif;font-size:24px;font-weight:400;color:#172f2d;margin:0 0 8px;line-height:1.3;">
+    <td style="background:#1e3a37;padding:24px 36px 20px;border-left:1px solid #243f3c;border-right:1px solid #243f3c;">
+      <p style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:#e6ddd0;margin:0;line-height:1.3;">
         Thank you, ${name}. ✦
       </p>
+    </td>
+  </tr>
+
+  <!-- Body — cream background -->
+  <tr>
+    <td style="background:#FDFCFA;padding:32px 36px 28px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;">
+
       <p style="font-size:15px;color:#5a6e6b;line-height:1.75;margin:0 0 28px;">
         We've received your intake form and will be in touch within
         <strong style="color:#172f2d;">1–2 business days</strong>
         to schedule your first appointment.
       </p>
 
-      <!-- Summary card -->
+      <!-- Client info summary card -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
         style="background:#F0EDE8;border-radius:8px;margin:0 0 28px;">
         <tr><td style="padding:20px 24px;">
@@ -312,19 +318,19 @@ function adminEmailHtml(d) {
 <tr><td align="center" style="padding:0 16px;">
 <table role="presentation" width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0">
 
-  <!-- Logo header -->
+  <!-- Branded header: dark green, logo mark + rule + wordmark -->
   ${emailHeader()}
 
-  <!-- Tag strip: NEW INTAKE SUBMISSION + client name — cream, opposite of header -->
+  <!-- Intake tag strip — sits directly below header, same dark green -->
   <tr>
-    <td style="background:#FDFCFA;padding:20px 32px 16px;border-left:1px solid #e8e3db;border-right:1px solid #e8e3db;border-bottom:1px solid #e8e3db;">
-      <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#89a99e;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif;">
+    <td style="background:#1e3a37;padding:20px 32px 18px;border-left:1px solid #243f3c;border-right:1px solid #243f3c;">
+      <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#89a99e;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif;">
         New Intake Submission
       </div>
-      <div style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:#172f2d;line-height:1.2;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:#e6ddd0;line-height:1.2;">
         ${fullName}
       </div>
-      <div style="font-size:12px;color:#89a99e;margin-top:4px;">${submitted}</div>
+      <div style="font-size:12px;color:#89a99e;margin-top:4px;font-family:Helvetica,Arial,sans-serif;">${submitted}</div>
     </td>
   </tr>
 
