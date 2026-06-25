@@ -41,6 +41,17 @@ export default function StagingBanner() {
     return unsub
   }, [isEditMode])
 
+  // Push the fixed nav down when the banner is visible via a CSS variable
+  useEffect(() => {
+    const root = document.documentElement
+    if (EDIT_ENABLED && isEditMode && IS_STAGING) {
+      root.style.setProperty('--banner-height', '40px')
+    } else {
+      root.style.removeProperty('--banner-height')
+    }
+    return () => root.style.removeProperty('--banner-height')
+  }, [isEditMode])
+
   // Only visible in staging build + authenticated edit session
   if (!EDIT_ENABLED || !isEditMode || !IS_STAGING) return null
 

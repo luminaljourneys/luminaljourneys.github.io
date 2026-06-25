@@ -47,7 +47,6 @@ function firestoreQueryResponse(docs) {
 const MOCK_AUTHORIZED_EDITORS = {
   emails: [
     'hi@keeya.nl',
-    'keeya@springsparrowhousing.com',
     'wouter@keijser.com',
     'dpendragon@pacbell.net',
   ],

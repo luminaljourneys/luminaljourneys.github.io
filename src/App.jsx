@@ -51,10 +51,18 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", "A");
   }, []);
 
-  // admin.luminaljourneys.com root → AdminPage directly, no /admin path needed.
-  // /admin on admin domain also works but clean URL is just admin.luminaljourneys.com
-  if (IS_ADMIN_DOMAIN && (route === "/" || route === "/admin")) {
-    return <AdminPage />;
+  // admin.luminaljourneys.com/admin → AdminPage.
+  // "/" on admin domain falls through to LandingPage so "Edit Site" toolbar
+  // button works — admins can browse and edit public pages in-place on this domain.
+  // Bookmark: admin.luminaljourneys.com/admin
+  if (IS_ADMIN_DOMAIN && route === "/admin") {
+    return (
+      <>
+        <StagingBanner />
+        <AdminPage />
+        <EditModeToggle />
+      </>
+    );
   }
 
   if (route === "/intake") return (

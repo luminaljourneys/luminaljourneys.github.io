@@ -71,7 +71,9 @@ node_modules/
 
 # Playwright output
 playwright-report/
+playwright-report-staging/
 test-results/
+.playwright-browsers/
 
 # Cloud Functions build output
 functions/lib/
@@ -82,4 +84,3 @@ functions/node_modules/
 
 # Office temp files
 presentations/~$*
-playwright-report-staging/

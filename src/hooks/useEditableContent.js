@@ -12,7 +12,10 @@ import { CONTENT_COLL } from '../lib/collections'
 import { useEditMode } from '../context/EditModeContext'
 
 export function useEditableContent(contentKey, fallback) {
-  const [content, setContent] = useState(fallback)
+  // Start as null (unknown) so we can distinguish "not yet loaded" from
+  // "loaded and equals fallback". This prevents the flash where the hardcoded
+  // fallback is briefly visible before Firestore resolves with edited content.
+  const [content, setContent] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const { recordSave, currentUser } = useEditMode()
@@ -23,13 +26,19 @@ export function useEditableContent(contentKey, fallback) {
     const fetchContent = async () => {
       try {
         const snap = await getDoc(doc(db, CONTENT_COLL, contentKey))
-        if (!cancelled && snap.exists()) {
-          const data = snap.data()
-          setContent(data.current ?? fallback)
-          setHistory(data.history ?? [])
+        if (!cancelled) {
+          if (snap.exists()) {
+            const data = snap.data()
+            setContent(data.current ?? fallback)
+            setHistory(data.history ?? [])
+          } else {
+            // No Firestore override — use fallback
+            setContent(fallback)
+          }
         }
       } catch (e) {
         console.warn(`[EditableContent] Could not fetch "${contentKey}", using fallback.`, e)
+        if (!cancelled) setContent(fallback)
       } finally {
         if (!cancelled) setLoading(false)
       }

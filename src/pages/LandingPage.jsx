@@ -106,7 +106,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav data-testid="nav" style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 90,
+        position: "fixed", top: "var(--banner-height, 0px)", left: 0, right: 0, zIndex: 90,
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: mobile ? "1rem 1.5rem" : "1.1rem 4rem",
         background: scrolled ? "rgba(249,248,246,0.97)" : "transparent",
@@ -170,7 +170,7 @@ export default function LandingPage() {
 
         <h1 style={{
           fontFamily: "var(--font-heading)",
-          fontSize: mobile ? "clamp(3rem, 15vw, 5rem)" : "clamp(4rem, 11vw, 10rem)",
+          fontSize: mobile ? "clamp(3rem, 11vw, 8.5rem)" : "clamp(4rem, 11vw, 8rem)",
           fontWeight: 400, lineHeight: 0.95,
           color: B.deep, letterSpacing: "-0.03em",
           marginBottom: mobile ? "2.5rem" : "4rem", maxWidth: "100%"
