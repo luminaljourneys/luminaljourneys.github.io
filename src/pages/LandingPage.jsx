@@ -170,7 +170,7 @@ export default function LandingPage() {
 
         <h1 style={{
           fontFamily: "var(--font-heading)",
-          fontSize: mobile ? "clamp(3rem, 15vw, 5rem)" : "clamp(4rem, 11vw, 10rem)",
+          fontSize: mobile ? "clamp(3rem, 11vw, 8.5rem)" : "clamp(4rem, 11vw, 8rem)",
           fontWeight: 400, lineHeight: 0.95,
           color: B.deep, letterSpacing: "-0.03em",
           marginBottom: mobile ? "2.5rem" : "4rem", maxWidth: "100%"
