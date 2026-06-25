@@ -41,7 +41,7 @@ function Wordmark({ color = B.deep, size = "1rem" }) {
 function LogoMark({ size = 60 }) {
   return (
     <img
-      src="/luminaljourneys-primary-logo-mark-gold.transparent.png"
+      src="/luminaljourneys-primary-logo-mark-gold-transparent.png"
       alt="Luminal Journeys"
       style={{ height: size, width: "auto", display: "block" }}
     />
