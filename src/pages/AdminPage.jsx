@@ -1169,7 +1169,7 @@ function Dashboard() {
       <div style={{ padding: "1rem clamp(1rem, 3vw, 2.5rem)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#172f2d", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
           <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <img src="/luminaljourneys-primary-logo-mark-gold.transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
+            <img src="/luminaljourneys-primary-logo-mark-gold-transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
             <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.25)" }} />
             <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "rgba(249,247,244,0.95)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</span>
           </button>

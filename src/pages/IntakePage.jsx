@@ -817,7 +817,7 @@ export default function IntakePage() {
       {/* Top bar */}
       <div style={{ padding: "1.2rem clamp(1rem, 4vw, 2.5rem)", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e5e7eb", background: "#F9F8F6" }}>
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <img src="/luminaljourneys-primary-logo-mark-gold.transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
+          <img src="/luminaljourneys-primary-logo-mark-gold-transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
           <div style={{ width: 1, height: 32, background: "rgba(23,47,45,0.1)" }} />
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#172f2d", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</span>
         </button>
