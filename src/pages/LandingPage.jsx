@@ -177,7 +177,6 @@ export default function LandingPage() {
         }}>
           <EditableContent contentKey="hero.headline.pre" fallback="Care that begins" tag="span" />
           <br />
-          with{" "}
           <em style={{ color: B.teal, fontStyle: "italic" }}>
             <EditableContent contentKey="hero.headline.em" fallback="listening." tag="span" />
           </em>
