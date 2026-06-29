@@ -37,20 +37,28 @@ function PageNotFound() {
       textAlign: "center", padding: "2rem",
     }}>
       <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✦</div>
-      <h1 style={{ fontSize: "2.4rem", fontWeight: 400, color: "#172f2d", marginBottom: "0.8rem" }}>
-        Page not found
-      </h1>
-      <p style={{
-        fontFamily: "'DM Sans', sans-serif", color: "#3a5450",
-        fontSize: "0.95rem", marginBottom: "2rem", maxWidth: 380, lineHeight: 1.7,
-      }}>
-        This page doesn't exist yet — or it may have been removed.
-      </p>
+      <EditableContent
+        contentKey="404.headline"
+        fallback="Page not found"
+        tag="h1"
+        style={{ fontSize: "2.4rem", fontWeight: 400, color: "#172f2d", marginBottom: "0.8rem" }}
+      />
+      <EditableContent
+        contentKey="404.body"
+        fallback="This page doesn't exist yet — or it may have been removed."
+        tag="p"
+        style={{
+          fontFamily: "'DM Sans', sans-serif", color: "#3a5450",
+          fontSize: "0.95rem", marginBottom: "2rem", maxWidth: 380, lineHeight: 1.7,
+        }}
+      />
       <button onClick={() => navigate("/")} style={{
         color: "var(--color-primary)", fontFamily: "'DM Sans', sans-serif",
         fontSize: "0.9rem", background: "none", border: "none",
         cursor: "pointer", borderBottom: "1px solid rgba(155,94,82,0.4)", padding: 0,
-      }}>← Back to home</button>
+      }}>
+        <EditableContent contentKey="thankyou.backhome" fallback="← Back to home" tag="span" />
+      </button>
     </div>
   );
 }
@@ -89,14 +97,16 @@ export default function DynamicPage({ pageId }) {
           color: "#172f2d", background: "none", border: "none", cursor: "pointer",
           letterSpacing: "0.18em", textTransform: "uppercase",
         }}>
-          Luminal Journeys
+          <EditableContent contentKey="brand.wordmark" fallback="Luminal Journeys" tag="span" />
         </button>
         <button onClick={() => navigate("/")} style={{
           background: "none", border: "1.5px solid rgba(23,47,45,0.15)",
           color: "#89a99e", padding: "0.4rem 1.1rem", borderRadius: "2rem",
           cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.78rem",
           letterSpacing: "0.04em",
-        }}>← Home</button>
+        }}>
+          <EditableContent contentKey="nav.backhome" fallback="← Home" tag="span" />
+        </button>
       </div>
 
       {/* HERO */}
@@ -141,12 +151,15 @@ export default function DynamicPage({ pageId }) {
             }}
           />
         ) : (
-          <p style={{
-            fontFamily: "'DM Sans', sans-serif", color: "#89a99e",
-            fontStyle: "italic", textAlign: "center",
-          }}>
-            Content coming soon.
-          </p>
+          <EditableContent
+            contentKey={ck("body")}
+            fallback="Content coming soon."
+            tag="p"
+            style={{
+              fontFamily: "'DM Sans', sans-serif", color: "#89a99e",
+              fontStyle: "italic", textAlign: "center",
+            }}
+          />
         )}
 
         {/* CTA spacer */}
@@ -159,7 +172,7 @@ export default function DynamicPage({ pageId }) {
             cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
             fontSize: "0.95rem", fontWeight: 600, letterSpacing: "0.04em",
           }}>
-            Book a Consultation
+            <EditableContent contentKey="page.cta.book" fallback="Book a Consultation" tag="span" />
           </button>
         </div>
       </div>
@@ -169,7 +182,7 @@ export default function DynamicPage({ pageId }) {
         fontFamily: "var(--font-mono)", fontSize: "0.75rem",
         color: "#89a99e", borderTop: "1px solid var(--color-border)",
       }}>
-        © {new Date().getFullYear()} Luminal Journeys · All rights reserved
+        <EditableContent contentKey="footer.copyright" fallback={`© ${new Date().getFullYear()} Luminal Journeys · All rights reserved`} tag="span" />
       </div>
       <MockupBanner />
     </div>

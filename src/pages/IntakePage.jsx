@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useMemo } from "react";
+import EditableContent from "../components/EditableContent.jsx";
 import MockupBanner from "../components/MockupBanner.jsx";
 import { navigate } from "../App.jsx";
 import { useFormConfig } from "../hooks/useFormConfig.js";
@@ -789,13 +790,17 @@ export default function IntakePage() {
       <div data-testid="thank-you" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg)", fontFamily: "'DM Serif Display', Georgia, serif", padding: "2rem", textAlign: "center" }}>
         <div>
           <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✦</div>
-          <h1 style={{ fontSize: "2.8rem", fontWeight: 400, color: "#172f2d", marginBottom: "1rem" }}>Thank you, {submitterName}.</h1>
+          <h1 style={{ fontSize: "2.8rem", fontWeight: 400, color: "#172f2d", marginBottom: "1rem" }}>
+            <EditableContent contentKey="thankyou.headline" fallback="Thank you" tag="span" />{submitterName ? `, ${submitterName}.` : "."}
+          </h1>
           <p style={{ fontSize: "1.1rem", color: "#3a5450", fontFamily: "'DM Sans', sans-serif", fontWeight: 300, maxWidth: 440, margin: "0 auto 2rem", lineHeight: 1.7 }}>
             {submitterEmail
-              ? <>We've received your intake form and will reach out to <strong>{submitterEmail}</strong> within 1–2 business days.</>
-              : "We've received your intake form and will be in touch shortly."}
+              ? <><EditableContent contentKey="thankyou.body.email" fallback="We've received your intake form and will reach out to" tag="span" /> <strong>{submitterEmail}</strong> <EditableContent contentKey="thankyou.body.timeframe" fallback="within 1–2 business days." tag="span" /></>
+              : <EditableContent contentKey="thankyou.body.noemail" fallback="We've received your intake form and will be in touch shortly." tag="span" />}
           </p>
-          <button onClick={() => navigate("/")} style={{ color: "var(--color-primary)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid rgba(155,94,82,0.4)", padding: 0 }}>← Back to home</button>
+          <button onClick={() => navigate("/")} style={{ color: "var(--color-primary)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid rgba(155,94,82,0.4)", padding: 0 }}>
+            <EditableContent contentKey="thankyou.backhome" fallback="← Back to home" tag="span" />
+          </button>
         </div>
         <MockupBanner />
       </div>
@@ -819,9 +824,9 @@ export default function IntakePage() {
         <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
           <img src="/luminaljourneys-primary-logo-mark-gold-transparent.png" alt="Luminal Journeys" style={{ height: 60, width: "auto" }} />
           <div style={{ width: 1, height: 32, background: "rgba(23,47,45,0.1)" }} />
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#172f2d", letterSpacing: "0.18em", textTransform: "uppercase" }}>Luminal Journeys</span>
+          <EditableContent contentKey="brand.wordmark" fallback="Luminal Journeys" tag="span" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "#172f2d", letterSpacing: "0.18em", textTransform: "uppercase" }} />
         </button>
-        <span style={{ fontSize: "0.8rem", fontFamily: "var(--font-mono)", color: "#89a99e", letterSpacing: "0.08em" }}>New Client Intake</span>
+        <EditableContent contentKey="intake.page.label" fallback="New Client Intake" tag="span" style={{ fontSize: "0.8rem", fontFamily: "var(--font-mono)", color: "#89a99e", letterSpacing: "0.08em" }} />
       </div>
 
       {/* In edit mode give extra right margin so the (+) buttons don't clip */}
@@ -945,10 +950,14 @@ export default function IntakePage() {
         {/* Nav buttons */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingBottom: "3rem" }}>
           {step > 0
-            ? <button data-testid="btn-back" onClick={() => setStep(s => s - 1)} style={{ background: "none", border: "1.5px solid rgba(23,47,45,0.15)", color: "#89a99e", padding: "0.75rem 1.8rem", borderRadius: "2rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem" }}>← Back</button>
+            ? <button data-testid="btn-back" onClick={() => setStep(s => s - 1)} style={{ background: "none", border: "1.5px solid rgba(23,47,45,0.15)", color: "#89a99e", padding: "0.75rem 1.8rem", borderRadius: "2rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem" }}>
+                <EditableContent contentKey="intake.btn.back" fallback="← Back" tag="span" />
+              </button>
             : <div />}
           {!isConfirm
-            ? <button data-testid="btn-continue" onClick={() => canAdvance && setStep(s => s + 1)} disabled={!canAdvance} style={{ background: canAdvance ? "var(--color-primary)" : "rgba(23,47,45,0.2)", color: canAdvance ? "#fff" : "#89a99e", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: canAdvance ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, transition: "all 0.2s" }}>Continue →</button>
+            ? <button data-testid="btn-continue" onClick={() => canAdvance && setStep(s => s + 1)} disabled={!canAdvance} style={{ background: canAdvance ? "var(--color-primary)" : "rgba(23,47,45,0.2)", color: canAdvance ? "#fff" : "#89a99e", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: canAdvance ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, transition: "all 0.2s" }}>
+                <EditableContent contentKey="intake.btn.continue" fallback="Continue →" tag="span" />
+              </button>
             : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
                 {submitError && (

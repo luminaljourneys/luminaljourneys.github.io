@@ -29,12 +29,17 @@ function useIsMobile() {
 
 function Wordmark({ color = B.deep, size = "1rem" }) {
   return (
-    <span style={{
-      fontFamily: "'DM Sans', sans-serif",
-      fontSize: size, fontWeight: 600,
-      letterSpacing: "0.18em", textTransform: "uppercase",
-      color, lineHeight: 1,
-    }}>Luminal Journeys</span>
+    <EditableContent
+      contentKey="brand.wordmark"
+      fallback="Luminal Journeys"
+      tag="span"
+      style={{
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: size, fontWeight: 600,
+        letterSpacing: "0.18em", textTransform: "uppercase",
+        color, lineHeight: 1,
+      }}
+    />
   );
 }
 
@@ -121,8 +126,12 @@ export default function LandingPage() {
         </div>
         {!mobile && (
           <div style={{ display: "flex", alignItems: "center", gap: "3rem" }}>
-            <a href="#principles" style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>Our Practice</a>
-            <a href="#process"    style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>Process</a>
+            <a href="#principles" style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
+              <EditableContent contentKey="nav.link.principles" fallback="Our Practice" tag="span" />
+            </a>
+            <a href="#process"    style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
+              <EditableContent contentKey="nav.link.process" fallback="Process" tag="span" />
+            </a>
             {/* Dynamic pages — added by client via Admin → Pages */}
             {navPages.map(page => (
               <button key={page.id} onClick={() => navigate("/" + page.id)} style={{
@@ -278,7 +287,7 @@ export default function LandingPage() {
       {/* PROCESS */}
       <div id="process" style={{ padding: mobile ? "3rem 1.5rem" : "6rem 4rem", borderBottom: `1px solid ${B.rule}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: mobile ? "2.5rem" : "4rem" }}>
-          <span style={{ fontSize: "0.68rem", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }}>The Process</span>
+          <EditableContent contentKey="process.section.label" fallback="The Process" tag="span" style={{ fontSize: "0.68rem", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }} />
           <div style={{ flex: 1, height: 1, background: B.rule }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(4, 1fr)" }}>
@@ -366,9 +375,12 @@ export default function LandingPage() {
           </div>
         )}
 
-        <span style={{ fontSize: "0.72rem", color: B.muted, fontFamily: "var(--font-mono)" }}>
-          © {new Date().getFullYear()} Luminal Journeys · All rights reserved
-        </span>
+        <EditableContent
+          contentKey="footer.copyright"
+          fallback={`© ${new Date().getFullYear()} Luminal Journeys · All rights reserved`}
+          tag="span"
+          style={{ fontSize: "0.72rem", color: B.muted, fontFamily: "var(--font-mono)" }}
+        />
         <button data-testid="admin-link" onClick={() => navigate("/admin")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: B.muted, opacity: 0.4, letterSpacing: "0.1em", fontFamily: "var(--font-mono)" }}>Admin</button>
       </footer>
 
