@@ -41,7 +41,7 @@ function Wordmark({ color = B.deep, size = "1rem" }) {
 function LogoMark({ size = 60 }) {
   return (
     <img
-      src="/luminaljourneys-primary-logo-mark-gold.transparent.png"
+      src="/luminaljourneys-primary-logo-mark-gold-transparent.png"
       alt="Luminal Journeys"
       style={{ height: size, width: "auto", display: "block" }}
     />
@@ -177,7 +177,6 @@ export default function LandingPage() {
         }}>
           <EditableContent contentKey="hero.headline.pre" fallback="Care that begins" tag="span" />
           <br />
-          with{" "}
           <em style={{ color: B.teal, fontStyle: "italic" }}>
             <EditableContent contentKey="hero.headline.em" fallback="listening." tag="span" />
           </em>
