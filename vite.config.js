@@ -8,13 +8,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Vite 8 / Rolldown requires manualChunks to be a function, not an object.
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("firebase/firestore")) return "firebase-firestore";
-          if (id.includes("firebase/auth")) return "firebase-auth";
-          if (id.includes("firebase/app") || id.includes("@firebase")) return "firebase-app";
-          if (id.includes("react") || id.includes("react-dom")) return "react-vendor";
+        manualChunks: {
+          // Firebase split into own chunks — loaded async, not on first paint
+          "firebase-app":       ["firebase/app"],
+          "firebase-firestore": ["firebase/firestore"],
+          "firebase-auth":      ["firebase/auth"],
+          // React core
+          "react-vendor":       ["react", "react-dom"],
         },
       },
     },
