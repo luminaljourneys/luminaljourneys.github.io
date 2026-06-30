@@ -66,6 +66,7 @@ const EditModeContext = createContext({
   isEditMode:        false,
   currentUser:       null,
   hasFirebaseAuth:   false,
+  authReady:         false,
   magicLinkPending:  false,
   requestAuth:       () => {},
   unlock:            async () => false,
@@ -116,6 +117,7 @@ export function EditModeProvider({ children }) {
     return null
   })
   const [hasFirebaseAuth,   setHasFirebaseAuth]   = useState(false) // true = Google or magic link
+  const [authReady,         setAuthReady]          = useState(false) // true once onAuthStateChanged fires
   const [showModal,         setShowModal]          = useState(false)
   const [onSuccess,         setOnSuccess]          = useState(null)
   const [inactivityWarning, setInactivityWarning] = useState(false)
@@ -196,8 +198,21 @@ export function EditModeProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       setHasFirebaseAuth(!!fbUser)
+      setAuthReady(true)
       if (fbUser) {
         console.log('[EditMode] Firebase Auth active:', fbUser.email)
+        // If user is Firebase-authenticated and has a valid localStorage session,
+        // restore edit mode automatically without requiring the modal.
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY)
+          if (raw) {
+            const { expiry, user } = JSON.parse(raw)
+            if (Date.now() < expiry && user) {
+              setCurrentUser(user)
+              setIsEditMode(true)
+            }
+          }
+        } catch { /* ignore */ }
       } else {
         console.log('[EditMode] Firebase Auth: none (password session or signed out)')
       }
@@ -370,11 +385,13 @@ export function EditModeProvider({ children }) {
     // Magic link is still completing — don't interrupt with the login modal.
     // isEditMode will flip to true once the async resolves, which unmounts AdminGate.
     if (magicLinkPending) return
+    // Wait for Firebase Auth to rehydrate before showing the modal
+    if (!authReady) return
     // Firebase Auth session still alive → re-enter instantly, no modal
     if (currentUser && hasFirebaseAuth) { setIsEditMode(true); cb?.(); return }
     setOnSuccess(() => cb ?? null)
     setShowModal(true)
-  }, [isEditMode, currentUser, hasFirebaseAuth, magicLinkPending])
+  }, [isEditMode, currentUser, hasFirebaseAuth, magicLinkPending, authReady])
 
   // ── Full sign-out (clears everything — used by inactivity timer + manual) ─
   // MUST be declared before `lock` — lock's dependency array references it,
@@ -468,6 +485,7 @@ export function EditModeProvider({ children }) {
       isEditMode,
       currentUser,
       hasFirebaseAuth,
+      authReady,
       magicLinkPending,
       showModal,
       requestAuth,
