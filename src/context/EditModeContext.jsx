@@ -49,7 +49,7 @@ import {
 const STORAGE_KEY      = 'lj_edit_session'
 const MAGIC_EMAIL_KEY  = 'lj_magic_link_email'
 const SESSION_MS       = 30 * 24 * 60 * 60 * 1000 // 30 days
-const INACTIVITY_MS    = 15 * 60 * 1000            // 15 minutes
+const INACTIVITY_MS    = 72 * 60 * 60 * 1000        // 72 hours
 const WARN_SECS        = 60                         // countdown seconds before auto sign-out
 
 // ── Display name lookup for magic-link editors ────────────────────────────────

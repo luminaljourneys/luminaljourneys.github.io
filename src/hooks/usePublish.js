@@ -49,7 +49,7 @@ export function usePublish() {
     // email magic link both produce a real Firebase token and can publish.
     const firebaseUser = auth.currentUser
     if (!firebaseUser) {
-      setError('Publishing requires signing in with Google or email link. Password sessions cannot write to production.')
+      setError('Your session has expired. Please sign in again with Google or your email magic link to publish.')
       return
     }
 

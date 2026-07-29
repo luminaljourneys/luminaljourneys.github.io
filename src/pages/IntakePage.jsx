@@ -440,7 +440,7 @@ function DynamicField({ field, form, focused, setFocused, onChange }) {
           })}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.45rem", fontSize: "0.7rem", color: "#89a99e", fontFamily: "var(--font-mono)" }}>
-          <span>1 — Not at all</span><span>{max} — Extremely</span>
+          <span>1 — Terrible</span><span>{max} — Excellent</span>
         </div>
       </div>
     );
