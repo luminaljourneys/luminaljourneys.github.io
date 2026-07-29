@@ -154,6 +154,67 @@ All live in Firestore collection `content_edits_staging` (staging) and `content_
 
 ---
 
+## Task 3: Fix the EditableContent Editing Bug
+
+**The problem:** When a client edits a field and saves, the page still flashes the fallback text on the next hard refresh — even after the seed script has run. The Firestore value is being saved correctly but the component isn't reliably prioritizing it.
+
+**Root cause to investigate:** `src/hooks/useEditableContent.js` — the `fetchContent` function runs on mount. If Firestore returns quickly, content renders fine. If Firestore is slow or returns before React has painted, the `visibility:hidden` placeholder may flicker. Check:
+1. Is `useEffect` running twice in React 19 strict mode? (causes double fetch / race condition)
+2. Is `cancelled` flag correctly preventing stale state updates?
+3. Should the hook use `onSnapshot` (real-time listener) instead of `getDoc` (one-time fetch)? Real-time would eliminate the flash entirely — any Firestore write immediately updates the UI.
+
+**Recommended fix:** Switch `getDoc` → `onSnapshot` in `useEditableContent.js`. This makes every `EditableContent` a live listener. When the client saves, all instances of that key update instantly across all open tabs — true Squarespace-style live editing.
+
+```js
+// Current (one-time fetch):
+const snap = await getDoc(doc(db, CONTENT_COLL, contentKey))
+
+// Better (real-time listener):
+const unsub = onSnapshot(doc(db, CONTENT_COLL, contentKey), (snap) => {
+  if (snap.exists()) {
+    setContent(snap.data().current ?? fallback)
+  } else {
+    setContent(fallback)
+  }
+  setLoading(false)
+})
+return unsub // cleanup
+```
+
+Import `onSnapshot` from `firebase/firestore`. The cleanup function replaces the `cancelled` flag pattern.
+
+---
+
+## Task 4: Lazy-Load the Intake Form for Performance
+
+**The problem:** The entire intake form — including the admin field editor (`InlineFieldEditor`), form builder UI, and all its logic — is bundled into the main JS chunk. This runs on every page load even for visitors who never go to `/intake`.
+
+**Target file:** `src/pages/IntakePage.jsx` (currently ~960 lines)
+
+**Fix:** Split the heavy admin-only components into a lazy-loaded chunk:
+
+```jsx
+// In App.jsx or wherever routes are defined — lazy load the whole IntakePage:
+import { lazy, Suspense } from 'react'
+const IntakePage = lazy(() => import('./pages/IntakePage'))
+
+// Wrap in Suspense:
+<Suspense fallback={<div style={{minHeight:'100vh',background:'var(--color-bg)'}} />}>
+  <IntakePage />
+</Suspense>
+```
+
+Also within `IntakePage.jsx`, the `InlineFieldEditor` component (admin-only form builder) should be lazy-loaded behind the `isEditMode` flag so regular intake clients never download it:
+
+```jsx
+const InlineFieldEditor = lazy(() => import('../components/InlineFieldEditor'))
+// Only render when isEditMode is true
+```
+
+This should cut the initial landing page bundle by ~30–40% since the intake form + Firebase form config listener won't load until the user navigates to `/intake`.
+
+---
+
 ## QA Checklist After Deploy
 
 - [ ] No flash of old text on page load (hard refresh `Cmd+Shift+R`)

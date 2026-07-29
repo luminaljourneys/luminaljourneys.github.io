@@ -646,7 +646,8 @@ export default function IntakePage() {
   const { isEditMode } = useEditMode();
 
   const [step, setStep]           = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted,       setSubmitted]       = useState(false);
+  const [screenerStopped, setScreenerStopped] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [focused, setFocused]     = useState(null);
@@ -781,6 +782,34 @@ export default function IntakePage() {
     [step, fields]
   );
 
+  // ── Screener gate ────────────────────────────────────────────────────────────
+  // If the current step is the screener and any yesno field is answered "Yes",
+  // block progression and show the screener-stopped message instead.
+  const screenerStepIndex = steps.findIndex(s => s.title.toLowerCase().includes('screener'));
+  const isScreenerStep    = !isEditMode && step === screenerStepIndex && screenerStepIndex !== -1;
+  const screenerHasYes    = isScreenerStep && fields
+    .filter(f => f.step === screenerStepIndex && f.type === 'yesno')
+    .some(f => form[f.name] === 'Yes');
+
+  const handleScreenerContinue = async () => {
+    if (screenerHasYes) {
+      try {
+        await addDoc(collection(db, 'intake_submissions'), {
+          ...form,
+          env:            ENV,
+          submittedAt:    serverTimestamp(),
+          status:         'Screener – Needs Review',
+          screenerStopped: true,
+        });
+      } catch (err) {
+        console.error('[IntakePage] Screener submission failed:', err);
+      }
+      setScreenerStopped(true);
+    } else {
+      setStep(s => s + 1);
+    }
+  };
+
   // Thank-you screen
   const submitterName  = form["preferredName"] || form["firstName"] || "there";
   const submitterEmail = form["email"] || "";
@@ -800,6 +829,26 @@ export default function IntakePage() {
           </p>
           <button onClick={() => navigate("/")} style={{ color: "var(--color-primary)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid rgba(155,94,82,0.4)", padding: 0 }}>
             <EditableContent contentKey="thankyou.backhome" fallback="← Back to home" tag="span" />
+          </button>
+        </div>
+        <MockupBanner />
+      </div>
+    );
+  }
+
+  if (screenerStopped) {
+    return (
+      <div data-testid="screener-stopped" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg)", fontFamily: "'DM Serif Display', Georgia, serif", padding: "2rem", textAlign: "center" }}>
+        <div>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✦</div>
+          <h1 style={{ fontSize: "2.4rem", fontWeight: 400, color: "#172f2d", marginBottom: "1rem" }}>
+            Thank you for completing the screener.
+          </h1>
+          <p style={{ fontSize: "1.1rem", color: "#3a5450", fontFamily: "'DM Sans', sans-serif", fontWeight: 300, maxWidth: 480, margin: "0 auto 2rem", lineHeight: 1.7 }}>
+            This information is meant to ensure safety and minimize risk. We will contact you soon to schedule a one-on-one meeting to discuss the screener.
+          </p>
+          <button onClick={() => navigate("/")} style={{ color: "var(--color-primary)", fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", letterSpacing: "0.06em", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid rgba(155,94,82,0.4)", padding: 0 }}>
+            ← Back to home
           </button>
         </div>
         <MockupBanner />
@@ -955,7 +1004,7 @@ export default function IntakePage() {
               </button>
             : <div />}
           {!isConfirm
-            ? <button data-testid="btn-continue" onClick={() => canAdvance && setStep(s => s + 1)} disabled={!canAdvance} style={{ background: canAdvance ? "var(--color-primary)" : "rgba(23,47,45,0.2)", color: canAdvance ? "#fff" : "#89a99e", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: canAdvance ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, transition: "all 0.2s" }}>
+            ? <button data-testid="btn-continue" onClick={() => canAdvance && (isScreenerStep ? handleScreenerContinue() : setStep(s => s + 1))} disabled={!canAdvance} style={{ background: canAdvance ? "var(--color-primary)" : "rgba(23,47,45,0.2)", color: canAdvance ? "#fff" : "#89a99e", padding: "0.85rem 2.4rem", borderRadius: "2rem", border: "none", cursor: canAdvance ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem", fontWeight: 600, transition: "all 0.2s" }}>
                 <EditableContent contentKey="intake.btn.continue" fallback="Continue →" tag="span" />
               </button>
             : (
