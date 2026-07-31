@@ -205,7 +205,7 @@ export default function LandingPage() {
             tag="p"
             style={{ fontSize: mobile ? "1rem" : "1.1rem", color: B.muted, lineHeight: 1.8 }}
           />
-          <div style={{ display: "flex", flexDirection: "column", alignItems: mobile ? "flex-start" : "flex-end", gap: "1rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: mobile ? "flex-start" : "flex-end", gap: "0.4rem" }}>
             <button data-testid="hero-cta" onClick={() => navigate("/intake")} style={{
               background: B.deep, color: B.paper, border: "none",
               padding: "1rem 2.5rem", borderRadius: "3rem", cursor: "pointer",
@@ -215,7 +215,7 @@ export default function LandingPage() {
             </button>
             <EditableContent
               contentKey="hero.cta.sub"
-              fallback="5 minutes · No commitment required"
+              fallback="Forms for Participation"
               tag="span"
               style={{ fontSize: "0.78rem", color: B.muted, fontFamily: "var(--font-mono)" }}
             />
