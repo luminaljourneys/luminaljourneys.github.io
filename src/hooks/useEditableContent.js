@@ -29,7 +29,8 @@ export function useEditableContent(contentKey, fallback) {
         if (!cancelled) {
           if (snap.exists()) {
             const data = snap.data()
-            setContent(data.current ?? fallback)
+            // Treat empty string same as no value — always show fallback rather than blank
+            setContent(data.current || fallback)
             setHistory(data.history ?? [])
           } else {
             // No Firestore override — use fallback

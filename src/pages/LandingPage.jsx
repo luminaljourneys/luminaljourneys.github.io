@@ -140,13 +140,21 @@ export default function LandingPage() {
                 letterSpacing: "0.02em", fontFamily: "var(--font-mono)", padding: 0,
               }}>{page.title}</button>
             ))}
-            <button data-testid="nav-cta" onClick={() => navigate("/intake")} style={{
-              background: B.deep, color: B.paper, border: "none",
-              padding: "0.65rem 1.8rem", borderRadius: "2rem", cursor: "pointer",
-              fontSize: "0.82rem", fontFamily: "var(--font-body)", letterSpacing: "0.04em", fontWeight: 500
-            }}>
-              <EditableContent contentKey="nav.cta" fallback="Get Started" tag="span" />
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
+              <button data-testid="nav-cta" onClick={() => navigate("/intake")} style={{
+                background: B.deep, color: B.paper, border: "none",
+                padding: "0.65rem 1.8rem", borderRadius: "2rem", cursor: "pointer",
+                fontSize: "0.82rem", fontFamily: "var(--font-body)", letterSpacing: "0.04em", fontWeight: 500
+              }}>
+                <EditableContent contentKey="nav.cta" fallback="Get Started" tag="span" />
+              </button>
+              <EditableContent
+                contentKey="hero.cta.sub"
+                fallback="Forms for Participation"
+                tag="span"
+                style={{ fontSize: "0.62rem", color: B.muted, fontFamily: "var(--font-mono)", letterSpacing: "0.03em" }}
+              />
+            </div>
           </div>
         )}
         {mobile && (
@@ -213,12 +221,6 @@ export default function LandingPage() {
             }}>
               <EditableContent contentKey="hero.cta.label" fallback="Get Started →" tag="span" />
             </button>
-            <EditableContent
-              contentKey="hero.cta.sub"
-              fallback="Forms for Participation"
-              tag="span"
-              style={{ fontSize: "0.78rem", color: B.muted, fontFamily: "var(--font-mono)" }}
-            />
           </div>
         </div>
       </div>
