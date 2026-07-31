@@ -87,3 +87,6 @@ functions/node_modules/
 
 # Office temp files
 presentations/~$*
+
+# Scripts — never commit credentials or service account keys
+scripts/*.json
