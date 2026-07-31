@@ -145,7 +145,7 @@ export default function LandingPage() {
               padding: "0.65rem 1.8rem", borderRadius: "2rem", cursor: "pointer",
               fontSize: "0.82rem", fontFamily: "var(--font-body)", letterSpacing: "0.04em", fontWeight: 500
             }}>
-              <EditableContent contentKey="nav.cta" fallback="Discover Your Journey" tag="span" />
+              <EditableContent contentKey="nav.cta" fallback="Get Started" tag="span" />
             </button>
           </div>
         )}
@@ -155,7 +155,7 @@ export default function LandingPage() {
             padding: "0.5rem 1.2rem", borderRadius: "2rem", cursor: "pointer",
             fontSize: "0.75rem", fontFamily: "var(--font-body)", fontWeight: 500
           }}>
-            <EditableContent contentKey="nav.cta" fallback="Discover Your Journey" tag="span" />
+            <EditableContent contentKey="nav.cta" fallback="Get Started" tag="span" />
           </button>
         )}
       </nav>
@@ -211,7 +211,7 @@ export default function LandingPage() {
               padding: "1rem 2.5rem", borderRadius: "3rem", cursor: "pointer",
               fontSize: "0.95rem", fontFamily: "var(--font-body)", fontWeight: 500
             }}>
-              <EditableContent contentKey="hero.cta.label" fallback="Discover Your Journey →" tag="span" />
+              <EditableContent contentKey="hero.cta.label" fallback="Get Started →" tag="span" />
             </button>
             <EditableContent
               contentKey="hero.cta.sub"
@@ -343,7 +343,7 @@ export default function LandingPage() {
             onMouseEnter={e => { e.currentTarget.style.background = B.paper; e.currentTarget.style.color = B.deep; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = B.paper; }}
           >
-            <EditableContent contentKey="manifesto.cta" fallback="Discover Your Journey →" tag="span" />
+            <EditableContent contentKey="manifesto.cta" fallback="Get Started →" tag="span" />
           </button>
         </div>
       </div>
