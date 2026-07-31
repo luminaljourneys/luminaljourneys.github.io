@@ -58,20 +58,20 @@ const DEFAULTS = {
   // Navigation
   'nav.link.principles':         'Our Practice',
   'nav.link.process':            'Process',
-  'nav.cta':                     'Discover Your Journey',
+  'nav.cta':                     'Get Started',
   'nav.backhome':                '← Home',
 
   // Hero section
   'hero.headline.pre':           'Care that begins',
   'hero.headline.em':            'listening.',
-  'hero.cta.label':              'Discover Your Journey →',
+  'hero.cta.label':              'Get Started →',
   'hero.cta.sub':                '5 minutes · No commitment required',
 
   // Process section
   'process.section.label':       'The Process',
 
   // Manifesto section
-  'manifesto.cta':               'Discover Your Journey →',
+  'manifesto.cta':               'Get Started →',
 
   // Footer
   'footer.copyright':            `© ${YEAR} Luminal Journeys · All rights reserved`,
