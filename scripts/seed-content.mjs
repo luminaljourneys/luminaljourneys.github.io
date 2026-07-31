@@ -65,7 +65,7 @@ const DEFAULTS = {
   'hero.headline.pre':           'Care that begins',
   'hero.headline.em':            'listening.',
   'hero.cta.label':              'Get Started →',
-  'hero.cta.sub':                '5 minutes · No commitment required',
+  'hero.cta.sub':                'Forms for Participation',
 
   // Process section
   'process.section.label':       'The Process',
