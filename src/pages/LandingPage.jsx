@@ -152,7 +152,7 @@ export default function LandingPage() {
                 contentKey="hero.cta.sub"
                 fallback="Forms for Participation"
                 tag="span"
-                style={{ fontSize: "0.62rem", color: B.muted, fontFamily: "var(--font-mono)", letterSpacing: "0.03em" }}
+                style={{ fontSize: "0.62rem", color: B.muted, fontFamily: "var(--font-mono)", letterSpacing: "0.03em", marginTop: "5px" }}
               />
             </div>
           </div>
