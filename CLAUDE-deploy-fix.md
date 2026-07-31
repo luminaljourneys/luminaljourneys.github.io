@@ -115,14 +115,14 @@ All live in Firestore collection `content_edits_staging` (staging) and `content_
 | `brand.wordmark` | Luminal Journeys | Nav, intake, dynamic pages |
 | `nav.link.principles` | Our Practice | Desktop nav |
 | `nav.link.process` | Process | Desktop nav |
-| `nav.cta` | Discover Your Journey | Nav CTA |
+| `nav.cta` | Get Started | Nav CTA |
 | `nav.backhome` | ← Home | Dynamic pages |
 | `hero.headline.pre` | Care that begins | Hero |
 | `hero.headline.em` | listening. | Hero italic |
-| `hero.cta.label` | Discover Your Journey → | Hero CTA |
+| `hero.cta.label` | Get Started → | Hero CTA |
 | `hero.cta.sub` | 5 minutes · No commitment required | Hero sub |
 | `process.section.label` | The Process | Process section |
-| `manifesto.cta` | Discover Your Journey → | Manifesto CTA |
+| `manifesto.cta` | Get Started → | Manifesto CTA |
 | `footer.copyright` | © 2026 Luminal Journeys · All rights reserved | Footer |
 | `intake.page.label` | New Client Intake | Intake top bar |
 | `intake.btn.back` | ← Back | Intake nav |
