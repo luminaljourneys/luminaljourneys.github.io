@@ -43,8 +43,10 @@ export default function EditableContent({
     return <Tag className={className} style={style} {...rest}>{content}</Tag>
   }
 
-  const handleOpen = () => {
+  const handleOpen = (e) => {
     if (isLockedByOther) return
+    e?.stopPropagation()  // prevent parent button/link from navigating
+    e?.preventDefault()
     setPanelOpen(true)
     acquireLock()
   }
