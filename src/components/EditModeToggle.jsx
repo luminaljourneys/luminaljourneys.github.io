@@ -120,10 +120,11 @@ function EditModeToggleInner() {
             />
             {/* Form Builder → live intake form for in-place editing */}
             <ToolbarBtn icon="✎" label="Form Builder" onClick={() => navigate('/intake')} />
-            {/* Pages / Publish → admin dashboard tabs */}
+            {/* Pages / Design / Publish → admin dashboard tabs */}
             <ToolbarBtn icon="☰" label="Pages"        onClick={() => navigate('/admin?tab=pages')} />
+            <ToolbarBtn icon="✦" label="Design"       onClick={() => navigate('/admin?tab=design')} />
             <ToolbarBtn icon="⬆" label="Publish"      onClick={() => navigate('/admin?tab=publish')} />
-            <ToolbarBtn icon="⌂" label="← View Site"  onClick={() => navigate('/')} />
+            <ToolbarBtn icon="⌂" label="View Live Site" onClick={() => window.open('https://luminaljourneys.com', '_blank')} />
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '0.2rem 0' }} />
 
