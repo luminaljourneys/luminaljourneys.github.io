@@ -85,8 +85,8 @@ functions/node_modules/
 # macOS
 .DS_Store
 
-# Office temp files
-presentations/~$*
+# Presentations — internal only, not for public repo
+presentations/
 
 # Scripts — never commit credentials or service account keys
 scripts/*.json
