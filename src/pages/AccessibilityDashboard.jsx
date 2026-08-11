@@ -11,8 +11,14 @@
  * axe-core is dynamically imported — zero impact on main bundle.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { navigate } from "../App.jsx";
+
+// ── Pages available to audit ──────────────────────────────────────────────────
+const AUDIT_PAGES = [
+  { id: "landing", label: "Landing Page", path: "/" },
+  { id: "intake",  label: "Intake Form",  path: "/intake" },
+];
 
 // ── Brand ──────────────────────────────────────────────────────────────────────
 const B = {
@@ -279,23 +285,39 @@ function DiChecklist({ checked, onToggle }) {
 // ── Main dashboard ────────────────────────────────────────────────────────────
 
 export default function AccessibilityDashboard() {
-  const [status, setStatus]     = useState("idle"); // idle | scanning | done | error
-  const [results, setResults]   = useState(null);
-  const [scannedUrl, setScannedUrl] = useState(null);
+  const [status, setStatus]         = useState("idle"); // idle | scanning | done | error
+  const [results, setResults]       = useState(null);
+  const [scannedPage, setScannedPage] = useState(null);
   const [scannedAt, setScannedAt]   = useState(null);
   const [errMsg, setErrMsg]         = useState(null);
   const [filterImpact, setFilterImpact] = useState("all");
-  const [diChecked, setDiChecked] = useState({});
+  const [diChecked, setDiChecked]   = useState({});
+  const iframeRef = useRef(null);
 
-  const runAudit = useCallback(async () => {
+  // Load a page in the hidden off-screen iframe, then run axe on its document.
+  // The user never leaves /admin/accessibility — single-tab experience.
+  const runAudit = useCallback(async (page) => {
     setStatus("scanning");
+    setScannedPage(page);
     setErrMsg(null);
+    setResults(null);
     try {
-      // Dynamic import — Vite code-splits axe-core into its own chunk.
-      // Only downloaded when this dashboard is visited.
       const { default: axe } = await import("axe-core");
 
-      const axeResults = await axe.run(document, {
+      // Point the iframe at the target page and wait for it to load
+      await new Promise((resolve, reject) => {
+        const iframe = iframeRef.current;
+        const timeout = setTimeout(() => reject(new Error("Page load timed out after 15s")), 15000);
+        iframe.onload = () => { clearTimeout(timeout); resolve(); };
+        iframe.onerror = (e) => { clearTimeout(timeout); reject(e); };
+        iframe.src = page.path;
+      });
+
+      // Give React a moment to hydrate inside the iframe
+      await new Promise(r => setTimeout(r, 1500));
+
+      const iframeDoc = iframeRef.current.contentDocument;
+      const axeResults = await axe.run(iframeDoc, {
         runOnly: {
           type: "tag",
           values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"],
@@ -305,7 +327,6 @@ export default function AccessibilityDashboard() {
       });
 
       setResults(axeResults);
-      setScannedUrl(window.location.origin + window.location.pathname.replace("/admin/accessibility", "/"));
       setScannedAt(new Date());
       setStatus("done");
     } catch (err) {
@@ -352,64 +373,52 @@ export default function AccessibilityDashboard() {
             Accessibility & D&I Audit
           </h1>
           <div style={{ fontSize: "0.75rem", color: B.sage, marginTop: "0.25rem", fontFamily: "var(--font-mono, monospace)" }}>
-            {scannedUrl ?? window.location.origin}
+            {scannedPage ? `${window.location.origin}${scannedPage.path}` : window.location.origin}
             {scannedAt && <span style={{ marginLeft: "1rem", color: B.sand }}>Last scanned: {timeSince(scannedAt)}</span>}
           </div>
         </div>
 
-        <button
-          onClick={runAudit}
-          disabled={status === "scanning"}
-          style={{
-            background: status === "scanning" ? B.muted : B.amber,
-            color: "#fff",
-            border: "none",
-            borderRadius: "2rem",
-            padding: "0.65rem 1.75rem",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            cursor: status === "scanning" ? "default" : "pointer",
-            letterSpacing: "0.02em",
-            fontFamily: "var(--font-body, Georgia, serif)",
-            transition: "opacity 0.2s",
-          }}
-        >
-          {status === "scanning" ? "Scanning…" : status === "done" ? "Re-Run Audit" : "▶ Run Audit"}
-        </button>
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+          {AUDIT_PAGES.map(page => {
+            const isActive = scannedPage?.id === page.id;
+            const scanning = status === "scanning" && isActive;
+            return (
+              <button
+                key={page.id}
+                onClick={() => runAudit(page)}
+                disabled={status === "scanning"}
+                style={{
+                  background: isActive ? B.amber : "rgba(255,255,255,0.1)",
+                  color: "#fff",
+                  border: `1.5px solid ${isActive ? B.amber : "rgba(255,255,255,0.25)"}`,
+                  borderRadius: "2rem",
+                  padding: "0.55rem 1.4rem",
+                  fontSize: "0.82rem",
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: status === "scanning" ? "default" : "pointer",
+                  fontFamily: "var(--font-body, Georgia, serif)",
+                  opacity: status === "scanning" && !isActive ? 0.5 : 1,
+                  transition: "all 0.2s",
+                }}
+              >
+                {scanning ? "Scanning…" : page.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Body ── */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem 2rem 4rem" }}>
 
-        {/* ── How to use — always visible at top ── */}
-        <div style={{ marginBottom: "1.75rem", padding: "1.25rem 1.5rem", background: B.card, borderRadius: "0.75rem", border: `1.5px solid ${B.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-          <div>
-            <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.4rem" }}>
-              How to audit a page
-            </div>
-            <div style={{ fontSize: "0.85rem", color: B.deep, lineHeight: 1.7 }}>
-              Navigate to a page, then click <strong>Run Audit</strong> — axe scans whatever is currently loaded.
-              Audit a specific page by navigating there first via the quick links below.
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
-            <button onClick={() => navigate("/")} style={{ background: B.deep, border: "none", color: B.paper, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
-              Landing page
-            </button>
-            <button onClick={() => navigate("/intake")} style={{ background: "transparent", border: `1.5px solid ${B.border}`, color: B.deep, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
-              Intake form
-            </button>
-          </div>
-        </div>
-
         {/* ── Idle state ── */}
         {status === "idle" && (
           <div style={{ textAlign: "center", padding: "4rem 2rem", color: B.muted }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛡</div>
-            <div style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Ready to audit</div>
-            <div style={{ fontSize: "0.875rem" }}>Click "Run Audit" to scan this page for WCAG 2.2 AA violations.</div>
-            <div style={{ fontSize: "0.8rem", marginTop: "1rem" }}>
-              Navigate to a specific page first if you want to audit it (e.g. <a href="/intake" style={{ color: B.amber }}>intake form</a>), then run the audit from there.
+            <div style={{ fontSize: "1.1rem", marginBottom: "0.5rem", color: B.deep }}>Select a page to audit</div>
+            <div style={{ fontSize: "0.875rem" }}>
+              Click <strong style={{ color: B.deep }}>Landing Page</strong> or <strong style={{ color: B.deep }}>Intake Form</strong> in the header.
+              axe loads the page in the background and scans it — no second tab needed.
             </div>
           </div>
         )}
@@ -534,6 +543,24 @@ export default function AccessibilityDashboard() {
         </div>
 
       </div>
+
+      {/* ── Hidden iframe — loads target pages off-screen for axe scanning ──
+          position:fixed + left:-9999px keeps it off-screen but NOT display:none.
+          display:none would hide all elements from axe, causing false positives. */}
+      <iframe
+        ref={iframeRef}
+        title="Accessibility audit frame"
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "1280px",
+          height: "900px",
+          border: "none",
+          visibility: "hidden",
+          pointerEvents: "none",
+        }}
+      />
     </div>
   );
 }
