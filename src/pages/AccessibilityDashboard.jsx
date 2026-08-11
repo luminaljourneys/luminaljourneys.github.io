@@ -285,13 +285,14 @@ function DiChecklist({ checked, onToggle }) {
 // ── Main dashboard ────────────────────────────────────────────────────────────
 
 export default function AccessibilityDashboard() {
-  const [status, setStatus]         = useState("idle"); // idle | scanning | done | error
-  const [results, setResults]       = useState(null);
+  const [status, setStatus]           = useState("idle"); // idle | scanning | done | error
+  const [results, setResults]         = useState(null);
   const [scannedPage, setScannedPage] = useState(null);
-  const [scannedAt, setScannedAt]   = useState(null);
-  const [errMsg, setErrMsg]         = useState(null);
+  const [selectedPage, setSelectedPage] = useState(AUDIT_PAGES[0]);
+  const [scannedAt, setScannedAt]     = useState(null);
+  const [errMsg, setErrMsg]           = useState(null);
   const [filterImpact, setFilterImpact] = useState("all");
-  const [diChecked, setDiChecked]   = useState({});
+  const [diChecked, setDiChecked]     = useState({});
   const iframeRef = useRef(null);
 
   // Load a page in the hidden off-screen iframe, then run axe on its document.
@@ -373,60 +374,91 @@ export default function AccessibilityDashboard() {
             Accessibility & D&I Audit
           </h1>
           <div style={{ fontSize: "0.75rem", color: B.sage, marginTop: "0.25rem", fontFamily: "var(--font-mono, monospace)" }}>
-            {scannedPage ? `${window.location.origin}${scannedPage.path}` : window.location.origin}
-            {scannedAt && <span style={{ marginLeft: "1rem", color: B.sand }}>Last scanned: {timeSince(scannedAt)}</span>}
+            {window.location.hostname} · WCAG 2.2 AA · axe-core
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-          {AUDIT_PAGES.map(page => {
-            const isActive = scannedPage?.id === page.id;
-            const scanning = status === "scanning" && isActive;
-            return (
-              <button
-                key={page.id}
-                onClick={() => runAudit(page)}
-                disabled={status === "scanning"}
-                style={{
-                  background: isActive ? B.amber : "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                  border: `1.5px solid ${isActive ? B.amber : "rgba(255,255,255,0.25)"}`,
-                  borderRadius: "2rem",
-                  padding: "0.55rem 1.4rem",
-                  fontSize: "0.82rem",
-                  fontWeight: isActive ? 600 : 400,
-                  cursor: status === "scanning" ? "default" : "pointer",
-                  fontFamily: "var(--font-body, Georgia, serif)",
-                  opacity: status === "scanning" && !isActive ? 0.5 : 1,
-                  transition: "all 0.2s",
-                }}
-              >
-                {scanning ? "Scanning…" : page.label}
-              </button>
-            );
-          })}
-        </div>
+        {scannedAt && (
+          <div style={{ fontSize: "0.75rem", color: B.sage, fontFamily: "var(--font-mono, monospace)", textAlign: "right" }}>
+            Last scanned: {timeSince(scannedAt)}
+          </div>
+        )}
       </div>
 
       {/* ── Body ── */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem 2rem 4rem" }}>
 
-        {/* ── Idle state ── */}
-        {status === "idle" && (
-          <div style={{ textAlign: "center", padding: "4rem 2rem", color: B.muted }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛡</div>
-            <div style={{ fontSize: "1.1rem", marginBottom: "0.5rem", color: B.deep }}>Select a page to audit</div>
-            <div style={{ fontSize: "0.875rem" }}>
-              Click <strong style={{ color: B.deep }}>Landing Page</strong> or <strong style={{ color: B.deep }}>Intake Form</strong> in the header.
-              axe loads the page in the background and scans it — no second tab needed.
+        {/* ── Audit control bar — always visible ── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.875rem",
+          background: B.card,
+          border: `1.5px solid ${B.border}`,
+          borderRadius: "0.75rem",
+          padding: "1.25rem 1.5rem",
+          marginBottom: "2rem",
+          flexWrap: "wrap",
+        }}>
+          <label
+            htmlFor="audit-page-select"
+            style={{ fontSize: "0.82rem", color: B.muted, fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+          >
+            Page to audit
+          </label>
+          <select
+            id="audit-page-select"
+            value={selectedPage.id}
+            onChange={e => setSelectedPage(AUDIT_PAGES.find(p => p.id === e.target.value))}
+            disabled={status === "scanning"}
+            style={{
+              flex: "1 1 200px",
+              padding: "0.6rem 1rem",
+              borderRadius: "0.5rem",
+              border: `1.5px solid ${B.border}`,
+              background: "#fff",
+              color: B.deep,
+              fontSize: "0.9rem",
+              fontFamily: "var(--font-body, Georgia, serif)",
+              cursor: "pointer",
+              appearance: "auto",
+            }}
+          >
+            {AUDIT_PAGES.map(p => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => runAudit(selectedPage)}
+            disabled={status === "scanning"}
+            style={{
+              background: status === "scanning" ? B.muted : B.teal,
+              color: "#fff",
+              border: "none",
+              borderRadius: "0.5rem",
+              padding: "0.65rem 1.75rem",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              cursor: status === "scanning" ? "default" : "pointer",
+              fontFamily: "var(--font-body, Georgia, serif)",
+              whiteSpace: "nowrap",
+              transition: "background 0.2s",
+            }}
+          >
+            {status === "scanning" ? "Scanning…" : "▶ Run Audit"}
+          </button>
+          {scannedPage && status === "done" && (
+            <div style={{ fontSize: "0.78rem", color: B.muted, fontFamily: "var(--font-mono, monospace)", whiteSpace: "nowrap" }}>
+              {window.location.origin}{scannedPage.path}
+              {scannedAt && <span style={{ marginLeft: "0.75rem" }}>{timeSince(scannedAt)}</span>}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* ── Scanning ── */}
         {status === "scanning" && (
-          <div style={{ textAlign: "center", padding: "4rem 2rem", color: B.muted }}>
-            <div style={{ fontSize: "0.95rem" }}>Scanning page with axe-core…</div>
+          <div style={{ textAlign: "center", padding: "3rem 2rem", color: B.muted }}>
+            <div style={{ fontSize: "0.95rem" }}>Loading <strong style={{ color: B.deep }}>{scannedPage?.label}</strong> and running axe-core…</div>
           </div>
         )}
 
