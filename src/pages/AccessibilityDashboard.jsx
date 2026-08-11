@@ -14,6 +14,9 @@
 
 import { useState, useCallback, useRef } from "react";
 import { navigate } from "../App.jsx";
+// ?url tells Vite to bundle axe.min.js as a static asset and return its URL.
+// We inject it into the iframe by URL (same-origin, no CDN, no CSP issues).
+import axeScriptUrl from "axe-core/axe.min.js?url";
 
 // ── Pages available to audit ──────────────────────────────────────────────────
 const AUDIT_PAGES = [
@@ -774,9 +777,10 @@ export default function AccessibilityDashboard() {
   }, []);
 
   // ── axe-core WCAG scan ──────────────────────────────────────────────────────
-  // axe must run INSIDE the iframe's window context — calling axe.run(iframeDoc)
-  // from the parent fails because axe's instanceof checks break across frame
-  // boundaries even on same-origin iframes. Fix: inject axe.source as a script
+  // axe must run inside the iframe's window context — axe.run(iframeDoc) from
+  // the parent fails because instanceof checks break across frame boundaries.
+  // axe.source is unavailable in Vite's ESM build. CDN has version lag + CSP risk.
+  // Fix: inject axeScriptUrl (bundled by Vite, served from same Firebase origin)
   // into the iframe, then call iframeWin.axe.run() from within that context.
   const runAudit = useCallback(async (page) => {
     setStatus("scanning");
@@ -784,18 +788,20 @@ export default function AccessibilityDashboard() {
     setErrMsg(null);
     setResults(null);
     try {
-      const { default: axe } = await import("axe-core");
       await ensureIframeLoaded(page.path);
 
       const iframeWin = iframeRef.current.contentWindow;
       const iframeDoc = iframeRef.current.contentDocument;
 
-      // Inject axe-core into the iframe's JS context if not already present
+      // Inject axe.min.js into the iframe if not already there
       if (!iframeWin.axe) {
-        const script = iframeDoc.createElement("script");
-        script.textContent = axe.source; // axe.source = full minified axe bundle string
-        iframeDoc.documentElement.appendChild(script);
-        // inline scripts execute synchronously — no need to await
+        await new Promise((resolve, reject) => {
+          const script = iframeDoc.createElement("script");
+          script.src = axeScriptUrl; // same-origin URL from Vite bundle
+          script.onload  = resolve;
+          script.onerror = () => reject(new Error("Failed to inject axe-core into iframe"));
+          iframeDoc.head.appendChild(script);
+        });
       }
 
       const axeResults = await iframeWin.axe.run({
@@ -1021,9 +1027,20 @@ export default function AccessibilityDashboard() {
         <div style={{ borderTop: `1.5px solid ${B.border}`, paddingTop: "2rem" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h2 style={{ fontFamily: "var(--font-heading, serif)", fontSize: "1.2rem", fontWeight: 400, margin: "0 0 0.2rem" }}>
-                Diversity & Inclusion Checklist
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.2rem", flexWrap: "wrap" }}>
+                <h2 style={{ fontFamily: "var(--font-heading, serif)", fontSize: "1.2rem", fontWeight: 400, margin: 0 }}>
+                  Diversity & Inclusion Checklist
+                </h2>
+                <span style={{
+                  padding: "0.2rem 0.75rem", borderRadius: "1rem",
+                  background: `${B.teal}18`, color: B.teal,
+                  fontSize: "0.72rem", fontFamily: "var(--font-mono, monospace)",
+                  border: `1px solid ${B.teal}50`, letterSpacing: "0.04em",
+                  fontWeight: 500,
+                }}>
+                  {selectedPage.label}
+                </span>
+              </div>
               <p style={{ fontSize: "0.82rem", color: B.muted, margin: 0, lineHeight: 1.5 }}>
                 Each item scans the selected page automatically. Click <strong>▶ Scan</strong> per item, or run all at once.
               </p>
