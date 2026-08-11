@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import LandingPage from "./pages/LandingPage";
 import IntakePage from "./pages/IntakePage";
 import AdminPage from "./pages/AdminPage";
+import AccessibilityDashboard from "./pages/AccessibilityDashboard.jsx";
 import BrandKitPage from "./brand/BrandKitPage";
 import DynamicPage from "./pages/DynamicPage.jsx";
 import StagingBanner from "./components/StagingBanner.jsx";
@@ -81,6 +82,11 @@ export default function App() {
       return null;
     }
     return <AdminPage />;
+  }
+
+  // Accessibility & D&I audit dashboard — admin domain only
+  if (route === "/admin/accessibility") {
+    return <AccessibilityDashboard />;
   }
 
   if (route === "/brand") return <BrandKitPage />;
