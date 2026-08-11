@@ -90,3 +90,6 @@ presentations/~$*
 
 # Scripts — never commit credentials or service account keys
 scripts/*.json
+
+# Local runbooks — never commit (contain internal process details)
+docs/
