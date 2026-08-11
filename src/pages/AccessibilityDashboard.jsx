@@ -337,6 +337,7 @@ export default function AccessibilityDashboard() {
       minHeight: "100vh",
       fontFamily: "var(--font-body, Georgia, serif)",
       color: B.deep,
+      zoom: 1.25,
     }}>
       {/* ── Header ── */}
       <div style={{ background: B.deep, color: B.paper, padding: "1.5rem 2.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
@@ -379,6 +380,27 @@ export default function AccessibilityDashboard() {
 
       {/* ── Body ── */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem 2rem 4rem" }}>
+
+        {/* ── How to use — always visible at top ── */}
+        <div style={{ marginBottom: "1.75rem", padding: "1.25rem 1.5rem", background: B.card, borderRadius: "0.75rem", border: `1.5px solid ${B.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
+            <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.4rem" }}>
+              How to audit a page
+            </div>
+            <div style={{ fontSize: "0.85rem", color: B.deep, lineHeight: 1.7 }}>
+              Navigate to a page, then click <strong>Run Audit</strong> — axe scans whatever is currently loaded.
+              Audit a specific page by navigating there first via the quick links below.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
+            <button onClick={() => navigate("/")} style={{ background: B.deep, border: "none", color: B.paper, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
+              Landing page
+            </button>
+            <button onClick={() => navigate("/intake")} style={{ background: "transparent", border: `1.5px solid ${B.border}`, color: B.deep, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
+              Intake form
+            </button>
+          </div>
+        </div>
 
         {/* ── Idle state ── */}
         {status === "idle" && (
@@ -511,21 +533,6 @@ export default function AccessibilityDashboard() {
           </div>
         </div>
 
-        {/* ── Help ── */}
-        <div style={{ marginTop: "2rem", padding: "1.25rem 1.5rem", background: B.card, borderRadius: "0.75rem", border: `1.5px solid ${B.border}` }}>
-          <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.75rem" }}>
-            How to audit other pages
-          </div>
-          <div style={{ fontSize: "0.85rem", color: B.muted, lineHeight: 1.8 }}>
-            Navigate to the page you want to audit, then append <code style={{ background: B.paper, padding: "0.1em 0.4em", borderRadius: "0.25rem", fontSize: "0.8em" }}>/admin/accessibility</code> to return here and run the audit.
-            Or: open the page in this tab, use the browser's back button to return to the dashboard, and click Re-Run Audit — the DOM state is preserved.
-            {" "}<br />
-            Quick links: {" "}
-            <button onClick={() => navigate("/")} style={{ background: "none", border: "none", color: B.amber, cursor: "pointer", textDecoration: "underline", fontSize: "0.85rem" }}>Landing page</button>
-            {" · "}
-            <button onClick={() => navigate("/intake")} style={{ background: "none", border: "none", color: B.amber, cursor: "pointer", textDecoration: "underline", fontSize: "0.85rem" }}>Intake form</button>
-          </div>
-        </div>
       </div>
     </div>
   );
