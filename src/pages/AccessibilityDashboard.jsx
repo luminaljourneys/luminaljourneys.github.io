@@ -2,17 +2,27 @@
  * AccessibilityDashboard.jsx — Luminal Journeys
  *
  * SonarCloud-style Accessibility & D&I Audit dashboard.
- * Scans any page URL using axe-core (WCAG 2.2 AA).
+ * Scans any page URL using axe-core (WCAG 2.2 AA) + automated D&I DOM checks.
  *
  * Routes:
  *   admin.luminaljourneys.com/admin/accessibility  (admin domain)
  *   luminaljourneys.com/admin/accessibility         (redirects to admin domain)
  *
  * axe-core is dynamically imported — zero impact on main bundle.
+ * D&I checks run against the hidden iframe document — no API calls needed.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { navigate } from "../App.jsx";
+// ?url tells Vite to bundle axe.min.js as a static asset and return its URL.
+// We inject it into the iframe by URL (same-origin, no CDN, no CSP issues).
+import axeScriptUrl from "axe-core/axe.min.js?url";
+
+// ── Pages available to audit ──────────────────────────────────────────────────
+const AUDIT_PAGES = [
+  { id: "landing", label: "Landing Page", path: "/" },
+  { id: "intake",  label: "Intake Form",  path: "/intake" },
+];
 
 // ── Brand ──────────────────────────────────────────────────────────────────────
 const B = {
@@ -45,53 +55,424 @@ const WCAG_TAG_LABEL = {
   "wcag22aa": "2.2 AA",
 };
 
-// ── D&I static checklist (manual review items) ────────────────────────────────
+// ── D&I checklist definition ──────────────────────────────────────────────────
 const DI_CHECKLIST = [
   {
     category: "Inclusive Language",
     items: [
-      { id: "pronouns",        label: 'Intake form includes pronoun field (they/them, he/him, she/her, custom)' },
+      { id: "pronouns",        label: "Intake form includes pronoun field (they/them, he/him, she/her, custom)" },
       { id: "gendered",        label: 'No gendered salutations ("ladies", "guys", "he or she")' },
       { id: "ableist",         label: 'No ableist language ("crazy", "lame", "blind to", "stands alone")' },
-      { id: "identity-first",  label: 'Uses identity-first language option where appropriate' },
+      { id: "identity-first",  label: "Uses identity-first language option where appropriate" },
     ],
   },
   {
     category: "Representation",
     items: [
-      { id: "imagery-diversity", label: 'Imagery reflects diverse individuals and family structures' },
-      { id: "alt-text",          label: 'All images have descriptive, meaningful alt text (checked by audit)' },
-      { id: "lgbtq-affirming",   label: 'Copy explicitly affirms LGBTQ+ clients if applicable to scope' },
+      { id: "imagery-diversity", label: "Imagery reflects diverse individuals and family structures" },
+      { id: "alt-text",          label: "All images have descriptive, meaningful alt text" },
+      { id: "lgbtq-affirming",   label: "Copy explicitly affirms LGBTQ+ clients if applicable to scope" },
     ],
   },
   {
     category: "Cognitive Accessibility",
     items: [
-      { id: "reading-level",  label: 'Body copy at ≤ 8th grade reading level (Flesch-Kincaid)' },
-      { id: "short-para",     label: 'Paragraphs ≤ 3 sentences; no walls of text' },
-      { id: "plain-language", label: 'Clinical/insurance terms are explained in plain language' },
-      { id: "error-guidance", label: 'Form error messages describe what went wrong and how to fix it' },
+      { id: "reading-level",  label: "Body copy at ≤ 8th grade reading level (Flesch-Kincaid)" },
+      { id: "short-para",     label: "Paragraphs ≤ 3 sentences; no walls of text" },
+      { id: "plain-language", label: "Clinical/insurance terms are explained in plain language" },
+      { id: "error-guidance", label: "Form error messages describe what went wrong and how to fix it" },
     ],
   },
   {
     category: "Sensory & Motor",
     items: [
-      { id: "keyboard",    label: 'All interactive elements reachable and operable via keyboard alone' },
-      { id: "touch-target",label: 'Touch targets ≥ 44×44 CSS pixels (WCAG 2.5.5)' },
-      { id: "motion",      label: 'Animations respect prefers-reduced-motion' },
-      { id: "color-alone", label: 'Color is never the sole means of conveying information' },
+      { id: "keyboard",     label: "All interactive elements reachable and operable via keyboard alone" },
+      { id: "touch-target", label: "Touch targets ≥ 44×44 CSS pixels (WCAG 2.5.5)" },
+      { id: "motion",       label: "Animations respect prefers-reduced-motion" },
+      { id: "color-alone",  label: "Color is never the sole means of conveying information" },
     ],
   },
   {
     category: "Technical & Structural",
     items: [
-      { id: "lang-attr",   label: '<html lang="en"> (or appropriate locale) is present' },
-      { id: "skip-link",   label: 'Skip-to-content link present for screen readers' },
-      { id: "page-title",  label: 'Every page has a unique, descriptive <title>' },
-      { id: "heading-order", label: 'Headings follow logical order (h1 → h2 → h3)' },
+      { id: "lang-attr",     label: '<html lang="en"> (or appropriate locale) is present' },
+      { id: "skip-link",     label: "Skip-to-content link present for screen readers" },
+      { id: "page-title",    label: "Every page has a unique, descriptive <title>" },
+      { id: "heading-order", label: "Headings follow logical order (h1 → h2 → h3)" },
     ],
   },
 ];
+
+// ── Syllable counter (Flesch-Kincaid approximation) ──────────────────────────
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (word.length <= 3) return 1;
+  return (
+    word
+      .replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "")
+      .replace(/^y/, "")
+      .match(/[aeiouy]{1,2}/g)?.length ?? 1
+  );
+}
+
+// ── Automated D&I DOM checkers ────────────────────────────────────────────────
+// Each checker receives the iframe document and returns { status, notes, repairs[] }
+// status: "pass" | "fail" | "warning"
+const DI_CHECKERS = {
+  pronouns: (doc) => {
+    const all = [...doc.querySelectorAll("input, select, label, textarea, [placeholder]")];
+    const has = all.some(el =>
+      /pronoun/i.test(
+        [el.textContent, el.placeholder, el.name, el.id, el.getAttribute("aria-label")].join(" ")
+      )
+    );
+    return has
+      ? { status: "pass", notes: "Pronoun field detected in the form." }
+      : {
+          status: "fail",
+          notes: "No pronoun field found on this page.",
+          repairs: [
+            "Add a 'Pronouns' field to the intake form.",
+            "Options: She/her · He/him · They/them · Prefer not to say · Custom (text input)",
+            "Place it near the name field — it signals inclusion before clients share their story.",
+          ],
+        };
+  },
+
+  gendered: (doc) => {
+    const text = doc.body?.innerText ?? "";
+    const terms = ["ladies", "guys", "he or she", "his or her", "gentlemen", "you guys", "man-made", "manpower"];
+    const hits = terms.filter(w => new RegExp(`\\b${w}\\b`, "i").test(text));
+    return hits.length === 0
+      ? { status: "pass", notes: "No gendered salutations detected." }
+      : {
+          status: "fail",
+          notes: `Gendered terms found: "${hits.join('", "')}"`,
+          repairs: hits.map(h => {
+            const alts = { ladies: "everyone / folks", guys: "everyone / folks", "he or she": "they", "his or her": "their", gentlemen: "everyone", "you guys": "you all / everyone", "man-made": "synthetic / artificial", manpower: "workforce / staff" };
+            return `Replace "${h}" → "${alts[h.toLowerCase()] || "a gender-neutral alternative"}"`;
+          }),
+        };
+  },
+
+  ableist: (doc) => {
+    const text = doc.body?.innerText ?? "";
+    const terms = ["crazy", "lame", "blind to", "deaf to", "dumb", "insane", "stupid", "cripple", "idiot", "stands alone", "falls on deaf"];
+    const hits = terms.filter(w => new RegExp(`\\b${w.replace(/ /g, "\\s+")}\\b`, "i").test(text));
+    return hits.length === 0
+      ? { status: "pass", notes: "No ableist language detected." }
+      : {
+          status: "fail",
+          notes: `Potentially ableist terms found: "${hits.join('", "')}"`,
+          repairs: [
+            "Replace ableist terms with neutral alternatives.",
+            "crazy → intense / unexpected   |   lame → disappointing   |   dumb → unclear",
+            "See consciousstyleguide.com for a full reference.",
+          ],
+        };
+  },
+
+  "identity-first": (doc) => {
+    const text = doc.body?.innerText ?? "";
+    const pf = /person (with|who has|living with)/i.test(text);
+    const id = /(autistic|disabled|deaf|blind|neurodivergent) (person|individual|client)/i.test(text);
+    if (!pf && !id) {
+      return {
+        status: "warning",
+        notes: "No disability language detected on this page — nothing to flag.",
+        repairs: [
+          "When writing about disability, preferences vary by community.",
+          "Autistic community often prefers identity-first: 'autistic person'.",
+          "Many others prefer person-first: 'person with a disability'.",
+          "Best practice: offer both, or follow the individual's preference.",
+        ],
+      };
+    }
+    return { status: "pass", notes: "Disability language detected — review manually to confirm it follows client preferences." };
+  },
+
+  "imagery-diversity": (doc) => {
+    const imgs = [...doc.querySelectorAll("img")];
+    return {
+      status: "warning",
+      notes: `${imgs.length} image(s) found. Visual diversity cannot be determined automatically.`,
+      repairs: [
+        "Review all images for diversity of race, ethnicity, age, body type, disability, and family structure.",
+        "Ensure no single demographic is overrepresented across the image set.",
+        "Avoid stock photos that appear staged or tokenistic.",
+      ],
+    };
+  },
+
+  "alt-text": (doc) => {
+    const imgs = [...doc.querySelectorAll("img")];
+    if (imgs.length === 0) return { status: "pass", notes: "No img elements found on this page." };
+    const missing = imgs.filter(img => img.getAttribute("alt") === null);
+    const empty   = imgs.filter(img => img.getAttribute("alt") === "" && img.getAttribute("role") !== "presentation" && !img.getAttribute("aria-hidden"));
+    if (missing.length === 0 && empty.length === 0) {
+      return { status: "pass", notes: `All ${imgs.length} image(s) have alt text.` };
+    }
+    return {
+      status: "fail",
+      notes: `${missing.length + empty.length} of ${imgs.length} image(s) need attention.`,
+      repairs: [
+        ...missing.map(img => `Missing alt attribute: <img src="${img.src?.split("/").pop()?.slice(0, 50) || "?"}">`),
+        ...empty.map(img => `Empty alt on non-decorative image — add a description: <img src="${img.src?.split("/").pop()?.slice(0, 50) || "?"}">`),
+      ],
+    };
+  },
+
+  "lgbtq-affirming": (doc) => {
+    const text = (doc.body?.innerText ?? "").toLowerCase();
+    const affirming = ["lgbtq", "queer", "all families", "all identities", "gender-affirming", "same-sex", "non-binary", "trans ", "rainbow", "pride"];
+    const found = affirming.filter(w => text.includes(w));
+    return found.length > 0
+      ? { status: "pass", notes: `LGBTQ+ affirming language detected: "${found.join('", "')}"` }
+      : {
+          status: "warning",
+          notes: "No explicit LGBTQ+ affirming language found.",
+          repairs: [
+            "Consider a statement like: 'We welcome clients of all gender identities, sexual orientations, and family structures.'",
+            "Even one sentence signals belonging before a client shares their story.",
+          ],
+        };
+  },
+
+  "reading-level": (doc) => {
+    const text = (doc.body?.innerText ?? "").replace(/\n+/g, " ").trim();
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().split(/\s+/).length > 2);
+    const words = text.split(/\s+/).filter(w => /[a-z]/i.test(w));
+    if (sentences.length < 3 || words.length < 20) {
+      return { status: "warning", notes: "Not enough text to calculate reading level reliably." };
+    }
+    const syllables = words.reduce((acc, w) => acc + countSyllables(w), 0);
+    const fk = 0.39 * (words.length / sentences.length) + 11.8 * (syllables / words.length) - 15.59;
+    const grade = Math.max(1, Math.round(fk));
+    return grade <= 8
+      ? { status: "pass", notes: `Estimated reading level: Grade ${grade} (Flesch-Kincaid). Target ≤ Grade 8. ✓` }
+      : {
+          status: "fail",
+          notes: `Estimated reading level: Grade ${grade}. Target is Grade 8 or lower.`,
+          repairs: [
+            "Shorten sentences — aim for ≤ 15 words per sentence.",
+            "Replace multi-syllable words: 'utilize' → 'use', 'facilitate' → 'help'.",
+            "Prefer active voice: 'We help families' not 'Families are helped by us'.",
+            "Paste copy into hemingwayapp.com to identify hard-to-read sentences.",
+          ],
+        };
+  },
+
+  "short-para": (doc) => {
+    const paras = [...doc.querySelectorAll("p")].filter(p => (p.innerText ?? "").trim().length > 0);
+    if (paras.length === 0) return { status: "pass", notes: "No paragraph elements found." };
+    const long = paras.filter(p => {
+      const sents = (p.innerText ?? "").split(/[.!?]+/).filter(s => s.trim().length > 3);
+      return sents.length > 3;
+    });
+    return long.length === 0
+      ? { status: "pass", notes: `All ${paras.length} paragraph(s) are ≤ 3 sentences.` }
+      : {
+          status: "fail",
+          notes: `${long.length} of ${paras.length} paragraph(s) exceed 3 sentences.`,
+          repairs: [
+            "Break long paragraphs into shorter ones — one idea per paragraph.",
+            "Target ≤ 3 sentences per paragraph.",
+            "Use bullet points for lists of 3+ items.",
+          ],
+        };
+  },
+
+  "plain-language": (doc) => {
+    const text = doc.body?.innerText ?? "";
+    const jargon = [
+      ["pursuant",       "in accordance with / following"],
+      ["utilize",        "use"],
+      ["facilitate",     "help / make easier"],
+      ["endeavor",       "try"],
+      ["aforementioned", "the above"],
+      ["commencing",     "starting"],
+      ["terminate",      "end"],
+      ["notwithstanding","despite / even though"],
+      ["in lieu of",     "instead of"],
+      ["subsequent",     "next / after"],
+    ];
+    const hits = jargon.filter(([w]) => new RegExp(`\\b${w}\\b`, "i").test(text));
+    return hits.length === 0
+      ? { status: "pass", notes: "No common jargon terms detected." }
+      : {
+          status: "warning",
+          notes: `${hits.length} jargon term(s) found.`,
+          repairs: hits.map(([w, alt]) => `Replace "${w}" → "${alt}"`),
+        };
+  },
+
+  "error-guidance": (doc) => {
+    const inputs = [...doc.querySelectorAll("input, textarea, select")];
+    if (inputs.length === 0) {
+      return {
+        status: "warning",
+        notes: "No form inputs found on this page. Select 'Intake Form' from the dropdown to test error messages.",
+      };
+    }
+    const alerts = [...doc.querySelectorAll('[role="alert"], [aria-live="polite"], [aria-live="assertive"]')];
+    return {
+      status: "warning",
+      notes: `${inputs.length} input(s) found. Submit the form with invalid data to inspect live error messages.`,
+      repairs: [
+        "Error messages must say what went wrong AND how to fix it.",
+        "✗ Bad: 'Invalid email'   ✓ Good: 'Please enter a valid email (e.g. name@example.com)'",
+        "Use aria-describedby to associate each error message with its input.",
+        alerts.length === 0 ? "No aria-live regions detected — add role=\"alert\" to error containers." : `${alerts.length} aria-live region(s) found ✓`,
+      ],
+    };
+  },
+
+  keyboard: (doc) => {
+    const interactive = [...doc.querySelectorAll("a[href], button, input, select, textarea, [tabindex]")];
+    const trapped = interactive.filter(el => parseInt(el.getAttribute("tabindex") ?? "0") < 0);
+    return trapped.length === 0
+      ? { status: "pass", notes: `${interactive.length} interactive element(s) — none have tabindex < 0.` }
+      : {
+          status: "warning",
+          notes: `${trapped.length} element(s) have tabindex < 0 (keyboard-unreachable). Also Tab through the page visually to check focus order and visibility.`,
+          repairs: trapped.slice(0, 6).map(el =>
+            `Remove tabindex="-1" from: <${el.tagName.toLowerCase()}${el.id ? ' id="' + el.id + '"' : el.className ? ' class="' + el.className.trim().split(" ")[0] + '"' : ""}>`
+          ),
+        };
+  },
+
+  "touch-target": (doc) => {
+    const interactive = [...doc.querySelectorAll("a[href], button, input[type='checkbox'], input[type='radio'], select")];
+    if (interactive.length === 0) return { status: "pass", notes: "No interactive elements found." };
+    const small = interactive.filter(el => {
+      try {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && (r.width < 44 || r.height < 44);
+      } catch { return false; }
+    });
+    return small.length === 0
+      ? { status: "pass", notes: `All ${interactive.length} interactive element(s) meet the 44×44px minimum (WCAG 2.5.5).` }
+      : {
+          status: "fail",
+          notes: `${small.length} of ${interactive.length} element(s) are below 44×44px.`,
+          repairs: small.slice(0, 6).map(el => {
+            const r = el.getBoundingClientRect();
+            const name = el.id ? "#" + el.id : el.className?.trim().split(" ")[0] ? "." + el.className.trim().split(" ")[0] : el.tagName.toLowerCase();
+            return `${name}: ${Math.round(r.width)}×${Math.round(r.height)}px → needs min 44×44px (add padding or min-width/height)`;
+          }),
+        };
+  },
+
+  motion: (doc) => {
+    let hasQuery = false;
+    try {
+      for (const ss of doc.styleSheets) {
+        try {
+          for (const rule of ss.cssRules) {
+            if (rule.conditionText?.includes("prefers-reduced-motion") || rule.media?.mediaText?.includes("prefers-reduced-motion")) {
+              hasQuery = true;
+              break;
+            }
+          }
+        } catch { /* cross-origin stylesheet, skip */ }
+        if (hasQuery) break;
+      }
+    } catch {}
+    return hasQuery
+      ? { status: "pass", notes: "prefers-reduced-motion media query found in stylesheets." }
+      : {
+          status: "fail",
+          notes: "No prefers-reduced-motion query detected. Users who prefer reduced motion will still see all animations.",
+          repairs: [
+            "@media (prefers-reduced-motion: reduce) {",
+            "  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }",
+            "}",
+            "Add this to your global CSS. For scroll-triggered animations, check the preference before running them.",
+          ],
+        };
+  },
+
+  "color-alone": (doc) => {
+    return {
+      status: "warning",
+      notes: "Cannot be fully determined automatically — requires visual review.",
+      repairs: [
+        "Check: are form errors indicated by color AND an icon or text label?",
+        "Check: are required fields marked with color AND a symbol (e.g., *) with legend?",
+        "Check: are links distinguishable from body text without relying on color alone?",
+        "Check: are charts or status indicators usable without color perception?",
+      ],
+    };
+  },
+
+  "lang-attr": (doc) => {
+    const lang = doc.documentElement?.getAttribute("lang");
+    return lang
+      ? { status: "pass", notes: `lang="${lang}" is set on the <html> element.` }
+      : {
+          status: "fail",
+          notes: "<html> is missing the lang attribute. Screen readers will guess the language, causing mispronunciation.",
+          repairs: ['Add lang="en" to <html> in index.html', "Use the correct BCP 47 code for your language (e.g., lang=\"nl\" for Dutch, lang=\"es\" for Spanish)."],
+        };
+  },
+
+  "skip-link": (doc) => {
+    const links = [...doc.querySelectorAll("a")];
+    const skip = links.find(
+      a => /skip|jump.*main|main.*content/i.test(a.textContent ?? "") ||
+           /^#(main|content|skip)/i.test(a.getAttribute("href") ?? "")
+    );
+    return skip
+      ? { status: "pass", notes: `Skip link found: "${skip.textContent?.trim()}"` }
+      : {
+          status: "fail",
+          notes: "No skip-to-content link detected. Keyboard users must Tab through the full navigation bar on every page load.",
+          repairs: [
+            "Add as the very first element inside <body>:",
+            '<a href="#main" class="skip-link">Skip to main content</a>',
+            "Add id=\"main\" to your main content wrapper.",
+            "Style: .skip-link { position: absolute; left: -9999px; } .skip-link:focus { position: static; }",
+          ],
+        };
+  },
+
+  "page-title": (doc) => {
+    const title = doc.title?.trim();
+    return title
+      ? { status: "pass", notes: `Page title: "${title}"` }
+      : {
+          status: "fail",
+          notes: "Page has no <title>. Screen readers announce the title when loading a page — without it, users have no orientation cue.",
+          repairs: [
+            "Add a unique, descriptive <title> to every page.",
+            "Format: <title>Intake Form — Luminal Journeys</title>",
+            "Each page title should describe its purpose, not just the site name.",
+          ],
+        };
+  },
+
+  "heading-order": (doc) => {
+    const headings = [...doc.querySelectorAll("h1,h2,h3,h4,h5,h6")];
+    if (headings.length === 0) return { status: "warning", notes: "No heading elements found on this page." };
+    const levels = headings.map(h => parseInt(h.tagName[1]));
+    const issues = [];
+    for (let i = 1; i < levels.length; i++) {
+      if (levels[i] - levels[i - 1] > 1) {
+        issues.push(`Skipped from h${levels[i - 1]} to h${levels[i]} — heading levels must not skip`);
+      }
+    }
+    const h1s = levels.filter(l => l === 1);
+    if (h1s.length > 1) issues.push(`${h1s.length} h1 elements found — page should have exactly one h1`);
+    if (h1s.length === 0) issues.push("No h1 found — every page needs exactly one h1");
+    return issues.length === 0
+      ? { status: "pass", notes: `${headings.length} headings in correct order: ${levels.map(l => "h" + l).join(" → ")}` }
+      : {
+          status: "fail",
+          notes: `${issues.length} heading structure issue(s).`,
+          repairs: issues,
+        };
+  },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -117,6 +498,14 @@ function impactCounts(violations) {
     moderate: violations.filter(v => v.impact === "moderate").length,
     minor:    violations.filter(v => v.impact === "minor").length,
   };
+}
+
+function statusColor(status) {
+  return { pass: "#16a34a", fail: "#dc2626", warning: "#d97706" }[status] ?? B.muted;
+}
+
+function statusIcon(status) {
+  return { pass: "✓", fail: "✗", warning: "⚠" }[status] ?? "·";
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -162,7 +551,7 @@ function QualityGate({ violations }) {
         width: "64px", height: "64px", borderRadius: "50%", flexShrink: 0,
         background: passed ? "#16a34a" : "#dc2626",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "1.75rem",
+        fontSize: "1.75rem", color: "#fff",
       }}>
         {passed ? "✓" : "✗"}
       </div>
@@ -241,35 +630,117 @@ function ViolationRow({ v, idx }) {
   );
 }
 
-function DiChecklist({ checked, onToggle }) {
+// ── D&I Checklist with automated per-item scanning ────────────────────────────
+function DiChecklist({ results, onScan, scanning }) {
   return (
     <div>
       {DI_CHECKLIST.map(section => (
-        <div key={section.category} style={{ marginBottom: "1.5rem" }}>
+        <div key={section.category} style={{ marginBottom: "2rem" }}>
           <div style={{
             fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase",
-            color: B.sage, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.75rem",
+            color: B.sage, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.5rem",
             fontWeight: 600,
           }}>
             {section.category}
           </div>
-          {section.items.map(item => (
-            <label key={item.id} style={{
-              display: "flex", alignItems: "flex-start", gap: "0.75rem",
-              padding: "0.6rem 0", borderBottom: `1px solid ${B.rule}`,
-              cursor: "pointer", userSelect: "none",
-            }}>
-              <input
-                type="checkbox"
-                checked={!!checked[item.id]}
-                onChange={() => onToggle(item.id)}
-                style={{ marginTop: "0.15rem", accentColor: B.deep, cursor: "pointer", flexShrink: 0 }}
-              />
-              <span style={{ fontSize: "0.875rem", color: checked[item.id] ? B.muted : B.deep, lineHeight: 1.5 }}>
-                {item.label}
-              </span>
-            </label>
-          ))}
+          <div style={{ background: "#fff", border: `1.5px solid ${B.border}`, borderRadius: "0.65rem", overflow: "hidden" }}>
+            {section.items.map((item, i) => {
+              const result   = results[item.id];
+              const isScanning = scanning[item.id];
+              const canAuto  = !!DI_CHECKERS[item.id];
+              const sc       = result ? statusColor(result.status) : B.border;
+              const hasResult = result && !isScanning;
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    borderTop: i === 0 ? "none" : `1px solid ${B.rule}`,
+                    padding: hasResult ? "0.875rem 1.125rem" : "0",
+                  }}
+                >
+                  {/* ── Main row ── */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.875rem",
+                    padding: hasResult ? "0" : "0.875rem 1.125rem",
+                    background: hasResult ? "transparent" : "transparent",
+                  }}>
+                    {/* Status dot */}
+                    <div style={{
+                      width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0,
+                      background: isScanning ? B.amber : (result ? sc : B.border),
+                      transition: "background 0.3s",
+                    }} />
+
+                    {/* Label */}
+                    <div style={{ flex: 1, fontSize: "0.875rem", color: result ? (result.status === "pass" ? B.muted : B.deep) : B.deep, lineHeight: 1.5 }}>
+                      {item.label}
+                    </div>
+
+                    {/* Scan button / status badge */}
+                    {canAuto && (
+                      <button
+                        onClick={() => !isScanning && onScan(item.id)}
+                        disabled={isScanning}
+                        style={{
+                          flexShrink: 0,
+                          padding: "0.3rem 0.9rem",
+                          borderRadius: "0.375rem",
+                          border: `1.5px solid ${hasResult ? sc : B.border}`,
+                          background: hasResult ? `${sc}14` : "transparent",
+                          color: hasResult ? sc : B.muted,
+                          fontSize: "0.75rem",
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontWeight: hasResult ? 600 : 400,
+                          cursor: isScanning ? "default" : "pointer",
+                          whiteSpace: "nowrap",
+                          minWidth: "80px",
+                          textAlign: "center",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {isScanning
+                          ? "Scanning…"
+                          : hasResult
+                            ? `${statusIcon(result.status)} ${result.status === "pass" ? "Pass" : result.status === "fail" ? "Fail" : "Review"}`
+                            : "▶ Scan"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ── Result details ── */}
+                  {hasResult && (
+                    <div style={{ marginTop: "0.6rem", paddingLeft: "1.4rem" }}>
+                      <div style={{ fontSize: "0.8rem", color: sc, marginBottom: result.repairs?.length ? "0.5rem" : 0, lineHeight: 1.5 }}>
+                        {result.notes}
+                      </div>
+                      {result.repairs?.map((r, ri) => (
+                        <div key={ri} style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "0.5rem",
+                          fontSize: "0.78rem",
+                          color: B.deep,
+                          padding: "0.3rem 0.75rem",
+                          marginBottom: "0.2rem",
+                          background: "#f8fafc",
+                          borderLeft: `3px solid ${sc}`,
+                          borderRadius: "0 0.25rem 0.25rem 0",
+                          lineHeight: 1.5,
+                          fontFamily: r.startsWith("@") || r.startsWith("<") ? "var(--font-mono, monospace)" : "inherit",
+                        }}>
+                          <span style={{ color: sc, flexShrink: 0, marginTop: "0.05rem" }}>→</span>
+                          <span>{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       ))}
     </div>
@@ -279,33 +750,67 @@ function DiChecklist({ checked, onToggle }) {
 // ── Main dashboard ────────────────────────────────────────────────────────────
 
 export default function AccessibilityDashboard() {
-  const [status, setStatus]     = useState("idle"); // idle | scanning | done | error
-  const [results, setResults]   = useState(null);
-  const [scannedUrl, setScannedUrl] = useState(null);
-  const [scannedAt, setScannedAt]   = useState(null);
-  const [errMsg, setErrMsg]         = useState(null);
+  const [status, setStatus]             = useState("idle"); // idle | scanning | done | error
+  const [results, setResults]           = useState(null);
+  const [scannedPage, setScannedPage]   = useState(null);
+  const [selectedPage, setSelectedPage] = useState(AUDIT_PAGES[0]);
+  const [scannedAt, setScannedAt]       = useState(null);
+  const [errMsg, setErrMsg]             = useState(null);
   const [filterImpact, setFilterImpact] = useState("all");
-  const [diChecked, setDiChecked] = useState({});
+  const [diResults, setDiResults]       = useState({});  // { [id]: { status, notes, repairs } }
+  const [diScanning, setDiScanning]     = useState({});  // { [id]: boolean }
+  const iframeRef         = useRef(null);
+  const iframeLoadedPath  = useRef(null); // tracks which path is currently in the iframe
 
-  const runAudit = useCallback(async () => {
+  // ── Ensure the iframe has the selected page loaded ──────────────────────────
+  const ensureIframeLoaded = useCallback(async (path) => {
+    if (iframeLoadedPath.current === path) return; // already loaded
+    await new Promise((resolve, reject) => {
+      const iframe = iframeRef.current;
+      const timeout = setTimeout(() => reject(new Error("Page load timed out after 15s")), 15000);
+      iframe.onload = () => { clearTimeout(timeout); resolve(); };
+      iframe.onerror = (e) => { clearTimeout(timeout); reject(e); };
+      iframe.src = path;
+    });
+    iframeLoadedPath.current = path;
+    await new Promise(r => setTimeout(r, 1500)); // hydration wait
+  }, []);
+
+  // ── axe-core WCAG scan ──────────────────────────────────────────────────────
+  // axe must run inside the iframe's window context — axe.run(iframeDoc) from
+  // the parent fails because instanceof checks break across frame boundaries.
+  // axe.source is unavailable in Vite's ESM build. CDN has version lag + CSP risk.
+  // Fix: inject axeScriptUrl (bundled by Vite, served from same Firebase origin)
+  // into the iframe, then call iframeWin.axe.run() from within that context.
+  const runAudit = useCallback(async (page) => {
     setStatus("scanning");
+    setScannedPage(page);
     setErrMsg(null);
+    setResults(null);
     try {
-      // Dynamic import — Vite code-splits axe-core into its own chunk.
-      // Only downloaded when this dashboard is visited.
-      const { default: axe } = await import("axe-core");
+      await ensureIframeLoaded(page.path);
 
-      const axeResults = await axe.run(document, {
-        runOnly: {
-          type: "tag",
-          values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"],
-        },
+      const iframeWin = iframeRef.current.contentWindow;
+      const iframeDoc = iframeRef.current.contentDocument;
+
+      // Inject axe.min.js into the iframe if not already there
+      if (!iframeWin.axe) {
+        await new Promise((resolve, reject) => {
+          const script = iframeDoc.createElement("script");
+          script.src = axeScriptUrl; // same-origin URL from Vite bundle
+          script.onload  = resolve;
+          script.onerror = () => reject(new Error("Failed to inject axe-core into iframe"));
+          iframeDoc.head.appendChild(script);
+        });
+      }
+
+      const axeResults = await iframeWin.axe.run({
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] },
         resultTypes: ["violations", "passes", "incomplete"],
         reporter: "v2",
       });
 
       setResults(axeResults);
-      setScannedUrl(window.location.origin + window.location.pathname.replace("/admin/accessibility", "/"));
       setScannedAt(new Date());
       setStatus("done");
     } catch (err) {
@@ -313,23 +818,59 @@ export default function AccessibilityDashboard() {
       setErrMsg(err.message ?? "Unknown error");
       setStatus("error");
     }
-  }, []);
+  }, [ensureIframeLoaded]);
 
-  const toggleDi = useCallback((id) => {
-    setDiChecked(prev => ({ ...prev, [id]: !prev[id] }));
-  }, []);
+  // ── Per-item D&I check ──────────────────────────────────────────────────────
+  const runItemCheck = useCallback(async (itemId) => {
+    const checker = DI_CHECKERS[itemId];
+    if (!checker) return;
+    setDiScanning(prev => ({ ...prev, [itemId]: true }));
+    try {
+      await ensureIframeLoaded(selectedPage.path);
+      const iframeDoc = iframeRef.current.contentDocument;
+      const result = checker(iframeDoc);
+      setDiResults(prev => ({ ...prev, [itemId]: result }));
+    } catch (err) {
+      setDiResults(prev => ({ ...prev, [itemId]: { status: "fail", notes: `Check failed: ${err.message}`, repairs: [] } }));
+    } finally {
+      setDiScanning(prev => ({ ...prev, [itemId]: false }));
+    }
+  }, [selectedPage, ensureIframeLoaded]);
 
-  const violations    = results?.violations ?? [];
-  const passes        = results?.passes ?? [];
-  const incomplete    = results?.incomplete ?? [];
-  const counts        = impactCounts(violations);
+  // ── Scan all D&I items at once ──────────────────────────────────────────────
+  const runAllChecks = useCallback(async () => {
+    const allIds = DI_CHECKLIST.flatMap(s => s.items.map(i => i.id)).filter(id => DI_CHECKERS[id]);
+    // Mark all as scanning
+    const scanState = {};
+    allIds.forEach(id => { scanState[id] = true; });
+    setDiScanning(scanState);
+    try {
+      await ensureIframeLoaded(selectedPage.path);
+      const iframeDoc = iframeRef.current.contentDocument;
+      const allResults = {};
+      for (const id of allIds) {
+        try { allResults[id] = DI_CHECKERS[id](iframeDoc); }
+        catch (err) { allResults[id] = { status: "fail", notes: `Check failed: ${err.message}`, repairs: [] }; }
+      }
+      setDiResults(prev => ({ ...prev, ...allResults }));
+    } catch (err) {
+      console.error("[D&I scan-all]", err);
+    } finally {
+      setDiScanning({});
+    }
+  }, [selectedPage, ensureIframeLoaded]);
 
-  const filteredViolations = filterImpact === "all"
-    ? violations
-    : violations.filter(v => v.impact === filterImpact);
+  const violations         = results?.violations ?? [];
+  const passes             = results?.passes ?? [];
+  const incomplete         = results?.incomplete ?? [];
+  const counts             = impactCounts(violations);
+  const filteredViolations = filterImpact === "all" ? violations : violations.filter(v => v.impact === filterImpact);
 
-  const diTotal    = DI_CHECKLIST.flatMap(s => s.items).length;
-  const diComplete = Object.values(diChecked).filter(Boolean).length;
+  const allDiIds    = DI_CHECKLIST.flatMap(s => s.items.map(i => i.id)).filter(id => DI_CHECKERS[id]);
+  const diPassed    = allDiIds.filter(id => diResults[id]?.status === "pass").length;
+  const diFailed    = allDiIds.filter(id => diResults[id]?.status === "fail").length;
+  const diScanned   = allDiIds.filter(id => diResults[id]).length;
+  const anyScanning = Object.values(diScanning).some(Boolean);
 
   return (
     <div style={{
@@ -352,72 +893,60 @@ export default function AccessibilityDashboard() {
             Accessibility & D&I Audit
           </h1>
           <div style={{ fontSize: "0.75rem", color: B.sage, marginTop: "0.25rem", fontFamily: "var(--font-mono, monospace)" }}>
-            {scannedUrl ?? window.location.origin}
-            {scannedAt && <span style={{ marginLeft: "1rem", color: B.sand }}>Last scanned: {timeSince(scannedAt)}</span>}
+            {window.location.hostname} · WCAG 2.2 AA · axe-core
           </div>
         </div>
 
-        <button
-          onClick={runAudit}
-          disabled={status === "scanning"}
-          style={{
-            background: status === "scanning" ? B.muted : B.amber,
-            color: "#fff",
-            border: "none",
-            borderRadius: "2rem",
-            padding: "0.65rem 1.75rem",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            cursor: status === "scanning" ? "default" : "pointer",
-            letterSpacing: "0.02em",
-            fontFamily: "var(--font-body, Georgia, serif)",
-            transition: "opacity 0.2s",
-          }}
-        >
-          {status === "scanning" ? "Scanning…" : status === "done" ? "Re-Run Audit" : "▶ Run Audit"}
-        </button>
+        {scannedAt && (
+          <div style={{ fontSize: "0.75rem", color: B.sage, fontFamily: "var(--font-mono, monospace)", textAlign: "right" }}>
+            Last scanned: {timeSince(scannedAt)}
+          </div>
+        )}
       </div>
 
       {/* ── Body ── */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "2rem 2rem 4rem" }}>
 
-        {/* ── How to use — always visible at top ── */}
-        <div style={{ marginBottom: "1.75rem", padding: "1.25rem 1.5rem", background: B.card, borderRadius: "0.75rem", border: `1.5px solid ${B.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-          <div>
-            <div style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.4rem" }}>
-              How to audit a page
+        {/* ── Audit control bar ── */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.875rem",
+          background: B.card, border: `1.5px solid ${B.border}`,
+          borderRadius: "0.75rem", padding: "1.25rem 1.5rem",
+          marginBottom: "2rem", flexWrap: "wrap",
+        }}>
+          <label htmlFor="audit-page-select" style={{ fontSize: "0.82rem", color: B.muted, fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+            Page to audit
+          </label>
+          <select
+            id="audit-page-select"
+            value={selectedPage.id}
+            onChange={e => setSelectedPage(AUDIT_PAGES.find(p => p.id === e.target.value))}
+            disabled={status === "scanning"}
+            style={{ flex: "1 1 200px", padding: "0.6rem 1rem", borderRadius: "0.5rem", border: `1.5px solid ${B.border}`, background: "#fff", color: B.deep, fontSize: "0.9rem", fontFamily: "var(--font-body, Georgia, serif)", cursor: "pointer" }}
+          >
+            {AUDIT_PAGES.map(p => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => runAudit(selectedPage)}
+            disabled={status === "scanning"}
+            style={{ background: status === "scanning" ? B.muted : B.teal, color: "#fff", border: "none", borderRadius: "0.5rem", padding: "0.65rem 1.75rem", fontSize: "0.9rem", fontWeight: 600, cursor: status === "scanning" ? "default" : "pointer", fontFamily: "var(--font-body, Georgia, serif)", whiteSpace: "nowrap", transition: "background 0.2s" }}
+          >
+            {status === "scanning" ? "Scanning…" : "▶ Run Audit"}
+          </button>
+          {scannedPage && status === "done" && (
+            <div style={{ fontSize: "0.78rem", color: B.muted, fontFamily: "var(--font-mono, monospace)", whiteSpace: "nowrap" }}>
+              {window.location.origin}{scannedPage.path}
+              {scannedAt && <span style={{ marginLeft: "0.75rem" }}>{timeSince(scannedAt)}</span>}
             </div>
-            <div style={{ fontSize: "0.85rem", color: B.deep, lineHeight: 1.7 }}>
-              Navigate to a page, then click <strong>Run Audit</strong> — axe scans whatever is currently loaded.
-              Audit a specific page by navigating there first via the quick links below.
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", flexShrink: 0 }}>
-            <button onClick={() => navigate("/")} style={{ background: B.deep, border: "none", color: B.paper, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
-              Landing page
-            </button>
-            <button onClick={() => navigate("/intake")} style={{ background: "transparent", border: `1.5px solid ${B.border}`, color: B.deep, borderRadius: "2rem", padding: "0.5rem 1.1rem", fontSize: "0.8rem", cursor: "pointer", fontFamily: "var(--font-body, Georgia, serif)" }}>
-              Intake form
-            </button>
-          </div>
+          )}
         </div>
-
-        {/* ── Idle state ── */}
-        {status === "idle" && (
-          <div style={{ textAlign: "center", padding: "4rem 2rem", color: B.muted }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛡</div>
-            <div style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Ready to audit</div>
-            <div style={{ fontSize: "0.875rem" }}>Click "Run Audit" to scan this page for WCAG 2.2 AA violations.</div>
-            <div style={{ fontSize: "0.8rem", marginTop: "1rem" }}>
-              Navigate to a specific page first if you want to audit it (e.g. <a href="/intake" style={{ color: B.amber }}>intake form</a>), then run the audit from there.
-            </div>
-          </div>
-        )}
 
         {/* ── Scanning ── */}
         {status === "scanning" && (
-          <div style={{ textAlign: "center", padding: "4rem 2rem", color: B.muted }}>
-            <div style={{ fontSize: "0.95rem" }}>Scanning page with axe-core…</div>
+          <div style={{ textAlign: "center", padding: "3rem 2rem", color: B.muted }}>
+            <div style={{ fontSize: "0.95rem" }}>Loading <strong style={{ color: B.deep }}>{scannedPage?.label}</strong> and running axe-core…</div>
           </div>
         )}
 
@@ -428,23 +957,19 @@ export default function AccessibilityDashboard() {
           </div>
         )}
 
-        {/* ── Results ── */}
+        {/* ── WCAG Results ── */}
         {status === "done" && results && (
           <>
-            {/* Quality gate */}
             <QualityGate violations={violations} />
-
-            {/* Metric row */}
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2rem" }}>
-              <MetricCard label="Critical"  count={counts.critical}  color={IMPACT_COLOR.critical}  />
-              <MetricCard label="Serious"   count={counts.serious}   color={IMPACT_COLOR.serious}   />
-              <MetricCard label="Moderate"  count={counts.moderate}  color={IMPACT_COLOR.moderate}  />
-              <MetricCard label="Minor"     count={counts.minor}     color={IMPACT_COLOR.minor}     />
-              <MetricCard label="Passes"    count={passes.length}    color={B.deep}                  />
-              <MetricCard label="Review"    count={incomplete.length} color={B.sage}                 />
+              <MetricCard label="Critical"  count={counts.critical}  color={IMPACT_COLOR.critical} />
+              <MetricCard label="Serious"   count={counts.serious}   color={IMPACT_COLOR.serious}  />
+              <MetricCard label="Moderate"  count={counts.moderate}  color={IMPACT_COLOR.moderate} />
+              <MetricCard label="Minor"     count={counts.minor}     color={IMPACT_COLOR.minor}    />
+              <MetricCard label="Passes"    count={passes.length}    color={B.deep}                />
+              <MetricCard label="Review"    count={incomplete.length} color={B.sage}               />
             </div>
 
-            {/* Violations table */}
             {violations.length > 0 ? (
               <div style={{ marginBottom: "2.5rem" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
@@ -457,15 +982,12 @@ export default function AccessibilityDashboard() {
                         key={f}
                         onClick={() => setFilterImpact(f)}
                         style={{
-                          padding: "0.3rem 0.75rem",
-                          borderRadius: "1rem",
+                          padding: "0.3rem 0.75rem", borderRadius: "1rem",
                           border: `1.5px solid ${filterImpact === f ? (IMPACT_COLOR[f] ?? B.deep) : B.border}`,
                           background: filterImpact === f ? (f === "all" ? B.deep : `${IMPACT_COLOR[f]}18`) : "transparent",
                           color: filterImpact === f ? (f === "all" ? B.paper : (IMPACT_COLOR[f] ?? B.deep)) : B.muted,
-                          fontSize: "0.75rem",
-                          cursor: "pointer",
-                          fontFamily: "var(--font-mono, monospace)",
-                          letterSpacing: "0.03em",
+                          fontSize: "0.75rem", cursor: "pointer",
+                          fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.03em",
                         }}
                       >
                         {f}
@@ -473,18 +995,12 @@ export default function AccessibilityDashboard() {
                     ))}
                   </div>
                 </div>
-
                 <div style={{ overflowX: "auto", borderRadius: "0.75rem", border: `1.5px solid ${B.border}` }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
                     <thead>
                       <tr style={{ background: B.card, borderBottom: `1.5px solid ${B.border}` }}>
                         {["Rule", "Impact", "Description", "Nodes", "WCAG", ""].map(h => (
-                          <th key={h} style={{
-                            padding: "0.75rem 1rem", textAlign: h === "Nodes" ? "center" : "left",
-                            fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase",
-                            color: B.muted, fontWeight: 600, fontFamily: "var(--font-mono, monospace)",
-                            whiteSpace: "nowrap",
-                          }}>
+                          <th key={h} style={{ padding: "0.75rem 1rem", textAlign: h === "Nodes" ? "center" : "left", fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: B.muted, fontWeight: 600, fontFamily: "var(--font-mono, monospace)", whiteSpace: "nowrap" }}>
                             {h}
                           </th>
                         ))}
@@ -492,13 +1008,7 @@ export default function AccessibilityDashboard() {
                     </thead>
                     <tbody>
                       {filteredViolations.length === 0
-                        ? (
-                          <tr>
-                            <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: B.muted }}>
-                              No violations at this impact level.
-                            </td>
-                          </tr>
-                        )
+                        ? <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: B.muted }}>No violations at this impact level.</td></tr>
                         : filteredViolations.map((v, i) => <ViolationRow key={v.id} v={v} idx={i} />)
                       }
                     </tbody>
@@ -513,27 +1023,75 @@ export default function AccessibilityDashboard() {
           </>
         )}
 
-        {/* ── D&I Checklist — always visible ── */}
+        {/* ── D&I Automated Checklist ── */}
         <div style={{ borderTop: `1.5px solid ${B.border}`, paddingTop: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
-            <h2 style={{ fontFamily: "var(--font-heading, serif)", fontSize: "1.2rem", fontWeight: 400, margin: 0 }}>
-              Diversity & Inclusion Checklist
-            </h2>
-            <span style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono, monospace)", color: B.muted }}>
-              {diComplete} / {diTotal} complete
-            </span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.2rem", flexWrap: "wrap" }}>
+                <h2 style={{ fontFamily: "var(--font-heading, serif)", fontSize: "1.2rem", fontWeight: 400, margin: 0 }}>
+                  Diversity & Inclusion Checklist
+                </h2>
+                <span style={{
+                  padding: "0.2rem 0.75rem", borderRadius: "1rem",
+                  background: `${B.teal}18`, color: B.teal,
+                  fontSize: "0.72rem", fontFamily: "var(--font-mono, monospace)",
+                  border: `1px solid ${B.teal}50`, letterSpacing: "0.04em",
+                  fontWeight: 500,
+                }}>
+                  {selectedPage.label}
+                </span>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: B.muted, margin: 0, lineHeight: 1.5 }}>
+                Each item scans the selected page automatically. Click <strong>▶ Scan</strong> per item, or run all at once.
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
+              {diScanned > 0 && (
+                <div style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono, monospace)", color: B.muted, textAlign: "right" }}>
+                  <span style={{ color: "#16a34a", fontWeight: 600 }}>{diPassed} pass</span>
+                  {diFailed > 0 && <span style={{ color: "#dc2626", fontWeight: 600, marginLeft: "0.5rem" }}>{diFailed} fail</span>}
+                  <span style={{ marginLeft: "0.5rem" }}>/ {allDiIds.length} items</span>
+                </div>
+              )}
+              <button
+                onClick={runAllChecks}
+                disabled={anyScanning}
+                style={{
+                  background: anyScanning ? B.muted : B.amber,
+                  color: "#fff", border: "none",
+                  borderRadius: "0.5rem", padding: "0.55rem 1.25rem",
+                  fontSize: "0.82rem", fontWeight: 600,
+                  cursor: anyScanning ? "default" : "pointer",
+                  fontFamily: "var(--font-body, Georgia, serif)",
+                  whiteSpace: "nowrap", transition: "background 0.2s",
+                }}
+              >
+                {anyScanning ? "Scanning…" : "⚡ Scan All Items"}
+              </button>
+            </div>
           </div>
-          <p style={{ fontSize: "0.85rem", color: B.muted, marginBottom: "1.5rem", lineHeight: 1.6 }}>
-            Manual review items — not automatically detectable by axe. Check each item as you verify it.
-            Progress is saved in this browser session.
-          </p>
 
-          <div style={{ background: B.card, borderRadius: "0.75rem", border: `1.5px solid ${B.border}`, padding: "1.5rem 2rem" }}>
-            <DiChecklist checked={diChecked} onToggle={toggleDi} />
+          <div style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", background: `${B.amber}10`, border: `1px solid ${B.amber}40`, borderRadius: "0.5rem", fontSize: "0.8rem", color: B.deep, lineHeight: 1.5 }}>
+            Scanning <strong>{selectedPage.label}</strong>. To test a different page, change the dropdown above and click Scan again.
           </div>
+
+          <DiChecklist results={diResults} onScan={runItemCheck} scanning={diScanning} />
         </div>
 
       </div>
+
+      {/* ── Hidden iframe — loads target pages off-screen for scanning ──
+          position:fixed + left:-9999px keeps it off-screen but NOT display:none.
+          display:none hides all elements from axe, causing false positives. */}
+      <iframe
+        ref={iframeRef}
+        title="Accessibility audit frame"
+        style={{
+          position: "fixed", left: "-9999px", top: 0,
+          width: "1280px", height: "900px",
+          border: "none", visibility: "hidden", pointerEvents: "none",
+        }}
+      />
     </div>
   );
 }

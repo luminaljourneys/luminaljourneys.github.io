@@ -136,7 +136,7 @@ export default function LandingPage() {
             {navPages.map(page => (
               <button key={page.id} onClick={() => navigate("/" + page.id)} style={{
                 background: "none", border: "none", cursor: "pointer",
-                color: B.muted, fontSize: "0.82rem", textDecoration: "none",
+                color: B.muted, fontSize: "var(--lj-size-nav, 0.82rem)", textDecoration: "none",
                 letterSpacing: "0.02em", fontFamily: "var(--font-mono)", padding: 0,
               }}>{page.title}</button>
             ))}
@@ -203,21 +203,40 @@ export default function LandingPage() {
           display: "grid",
           gridTemplateColumns: mobile ? "1fr" : "1fr 1fr",
           gap: mobile ? "2rem" : "4rem",
-          alignItems: "flex-end",
+          alignItems: "flex-start",
           paddingTop: mobile ? "2rem" : "3rem",
           borderTop: `1px solid ${B.rule}`
         }}>
+          {/* LEFT COLUMN — context / problem */}
           <EditableContent
             contentKey="hero.paragraph"
-            fallback="A private integrative health practice for people who want a care team that treats the whole person — not just the presenting complaint."
-            tag="p"
-            style={{ fontSize: mobile ? "1rem" : "1.1rem", color: B.muted, lineHeight: 1.8 }}
+            fallback={`Human potential is rarely blocked by a lack of intelligence or drive; it is blocked by unconscious patterns and fears stored deep within our nervous system. Psychedelics serve as a unique mirror - reflecting the unseen parts of our psyche to offer a rare opportunity to gain insights, address trauma, rewire unhelpful patterns, and accelerate inner growth. They are catalysts that illuminate your true human potential.\n\nTo step into the depths of your mind, you need a guide who knows how to hold the floor.\n\nToday's psychedelic landscape is largely unregulated—flooded with self-proclaimed shamans, weekend-certified retreat guides, and practitioners who lack healthcare or mental health backgrounds. Entering non-ordinary states of consciousness requires far more than good intentions; it demands rigorous psychological safety, ethical boundaries, and professional competence.`}
+            tag="div"
+            style={{
+              fontSize: "var(--lj-size-body, 1.1rem)",
+              color: "rgba(23,47,45,0.82)",
+              lineHeight: 1.9,
+              whiteSpace: "pre-line",
+            }}
           />
-          <div style={{ display: "flex", flexDirection: "column", alignItems: mobile ? "flex-start" : "flex-end", gap: "0.4rem" }}>
+          {/* RIGHT COLUMN — Luminal Journeys answer + CTA */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2rem", paddingTop: mobile ? 0 : "0.25rem" }}>
+            <EditableContent
+              contentKey="hero.right.body"
+              fallback={`At Luminal Journeys, you don't have to choose between deep expansion vs. Safety and competence. We are a collective of licensed wellness, healthcare, and mental health professionals—all with proven leadership experience and formal certifications in psychedelic facilitation.\n\nBy bridging indigenous wisdom with healthcare frameworks, our protocols balance the ancient mysticism of plant medicines with psychological rigor and practical application in modern life. Our standard of competence ensures your journey is not only deeply transformative, but held with absolute psychological, somatic, and ethical safety.`}
+              tag="div"
+              style={{
+                fontSize: "var(--lj-size-body, 1.1rem)",
+                color: "rgba(23,47,45,0.82)",
+                lineHeight: 1.9,
+                whiteSpace: "pre-line",
+              }}
+            />
             <button data-testid="hero-cta" onClick={() => navigate("/intake")} style={{
               background: B.deep, color: B.paper, border: "none",
               padding: "1rem 2.5rem", borderRadius: "3rem", cursor: "pointer",
-              fontSize: "0.95rem", fontFamily: "var(--font-body)", fontWeight: 500
+              fontSize: "0.95rem", fontFamily: "var(--font-body)", fontWeight: 500,
+              alignSelf: mobile ? "flex-start" : "flex-end",
             }}>
               <EditableContent contentKey="hero.cta.label" fallback="Get Started →" tag="span" />
             </button>
@@ -247,7 +266,7 @@ export default function LandingPage() {
               contentKey={`${s.key}.label`}
               fallback={s.label}
               tag="div"
-              style={{ fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, marginTop: "0.5rem", fontFamily: "var(--font-mono)" }}
+              style={{ fontSize: "var(--lj-size-micro, 0.72rem)", letterSpacing: "0.1em", textTransform: "uppercase", color: B.muted, marginTop: "0.5rem", fontFamily: "var(--font-mono)" }}
             />
           </div>
         ))}
@@ -280,7 +299,7 @@ export default function LandingPage() {
               contentKey={`${p.key}.body`}
               fallback={p.body}
               tag="p"
-              style={{ fontSize: mobile ? "0.9rem" : "1rem", color: B.muted, lineHeight: 1.8 }}
+              style={{ fontSize: "var(--lj-size-body, 1rem)", color: B.muted, lineHeight: 1.8 }}
             />
           </div>
         ))}
@@ -289,7 +308,7 @@ export default function LandingPage() {
       {/* PROCESS */}
       <div id="process" style={{ padding: mobile ? "3rem 1.5rem" : "6rem 4rem", borderBottom: `1px solid ${B.rule}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: mobile ? "2.5rem" : "4rem" }}>
-          <EditableContent contentKey="process.section.label" fallback="The Process" tag="span" style={{ fontSize: "0.68rem", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }} />
+          <EditableContent contentKey="process.section.label" fallback="The Process" tag="span" style={{ fontSize: "var(--lj-size-micro, 0.68rem)", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }} />
           <div style={{ flex: 1, height: 1, background: B.rule }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(4, 1fr)" }}>
@@ -300,7 +319,7 @@ export default function LandingPage() {
               borderLeft:  !mobile && i === 0 ? `1px solid ${B.rule}` : "none",
               borderBottom: mobile && i < 3 ? `1px solid ${B.rule}` : "none",
             }}>
-              <div style={{ fontSize: "0.65rem", letterSpacing: "0.2em", color: B.amber, marginBottom: "1rem", fontFamily: "var(--font-mono)" }}>{s.step}</div>
+              <div style={{ fontSize: "var(--lj-size-micro, 0.65rem)", letterSpacing: "0.2em", color: B.amber, marginBottom: "1rem", fontFamily: "var(--font-mono)" }}>{s.step}</div>
               <EditableContent
                 contentKey={`${s.key}.title`}
                 fallback={s.title}
@@ -311,7 +330,7 @@ export default function LandingPage() {
                 contentKey={`${s.key}.detail`}
                 fallback={s.detail}
                 tag="p"
-                style={{ fontSize: "0.88rem", color: B.muted, lineHeight: 1.75 }}
+                style={{ fontSize: "var(--lj-size-body, 0.88rem)", color: B.muted, lineHeight: 1.75 }}
               />
             </div>
           ))}
