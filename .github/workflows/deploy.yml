@@ -68,3 +68,71 @@ jobs:
       - name: Deploy to Production
         if: github.ref == 'refs/heads/main'
         run: firebase deploy --only hosting:production --project luminaljourneys --non-interactive --token "${{ secrets.FIREBASE_TOKEN }}"
+
+  # ── Accessibility Audit (WCAG 2.2) ───────────────────────────────────────────
+  # Runs after deploy. Audits the live URL — no secrets needed.
+  # fail-on: critical blocks the pipeline only for critical violations.
+  # Reports are uploaded as artifacts visible in the Actions tab.
+  a11y:
+    name: Accessibility Audit (WCAG 2.2 AA)
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Wait for Firebase CDN propagation
+        run: sleep 20
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-accesslint
+
+      # ── Staging audit — regression mode (new violations only vs production) ──
+      - name: Audit Staging — Home
+        if: github.ref == 'refs/heads/dev'
+        uses: AccessLint/audit@v1
+        id: a11y_staging_home
+        with:
+          url: https://admin.luminaljourneys.com
+          compare-against: https://luminaljourneys.com
+          wcag-level: AA
+          min-impact: moderate
+          fail-on: critical
+
+      - name: Audit Staging — Intake
+        if: github.ref == 'refs/heads/dev'
+        uses: AccessLint/audit@v1
+        id: a11y_staging_intake
+        with:
+          url: https://admin.luminaljourneys.com/intake
+          compare-against: https://luminaljourneys.com/intake
+          wcag-level: AA
+          min-impact: moderate
+          fail-on: critical
+
+      # ── Production audit — full WCAG 2.2 AA scan ─────────────────────────────
+      - name: Audit Production — all pages
+        if: github.ref == 'refs/heads/main'
+        uses: AccessLint/audit@v1
+        id: a11y_prod
+        with:
+          urls: |
+            https://luminaljourneys.com
+            https://luminaljourneys.com/intake
+          wcag-level: AA
+          min-impact: moderate
+          fail-on: critical
+
+      # ── Upload report artifact — always, even if audit fails ─────────────────
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accesslint-report-${{ github.ref_name }}-${{ github.run_number }}
+          path: |
+            accesslint-report.json
+            accesslint-report.md
+          retention-days: 30
