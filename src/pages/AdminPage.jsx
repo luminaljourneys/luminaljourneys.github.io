@@ -19,6 +19,7 @@ import { usePublish }              from "../hooks/usePublish.js";
 import { useEditMode }             from "../context/EditModeContext.jsx";
 import { useIntakeSubmissions }    from "../hooks/useIntakeSubmissions.js";
 import { ENV }                     from "../lib/collections.js";
+import DesignTab                   from "./DesignTab.jsx";
 
 // ─── Shared style tokens ──────────────────────────────────────────────────────
 const S = {
@@ -1132,6 +1133,7 @@ const TABS = [
   { id: "intakes",  label: "Intakes" },
   { id: "form",     label: "Form Builder" },
   { id: "pages",    label: "Pages" },
+  { id: "design",   label: "Design" },
   { id: "publish",  label: "Publish" },
 ];
 
@@ -1207,6 +1209,7 @@ function Dashboard() {
         {tab === "intakes" && <IntakesTab />}
         {tab === "form"    && <FormBuilderTab />}
         {tab === "pages"   && <PagesTab />}
+        {tab === "design"  && <DesignTab />}
         {tab === "publish" && <PublishTab />}
 
       </div>

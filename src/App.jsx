@@ -15,6 +15,7 @@ import DynamicPage from "./pages/DynamicPage.jsx";
 import StagingBanner from "./components/StagingBanner.jsx";
 import EditModeToggle from "./components/EditModeToggle.jsx";
 import { IS_STAGING } from "./lib/collections.js";
+import { useDesignTokens } from "./hooks/useDesignTokens.js";
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export function navigate(to) {
@@ -43,6 +44,14 @@ function useRoute() {
 // admin.luminaljourneys.com always serves the admin panel — no /admin path needed.
 const IS_ADMIN_DOMAIN = window.location.hostname === 'admin.luminaljourneys.com';
 
+// ── Design token loader — applies CSS vars on every page load ─────────────────
+// Mounts once at the app root so all pages inherit the typography settings
+// Tie configures in the Admin → Design tab.
+function DesignTokenProvider() {
+  useDesignTokens(); // side-effect: injects CSS vars onto <html>
+  return null;
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const route = useRoute();
@@ -59,6 +68,7 @@ export default function App() {
   if (IS_ADMIN_DOMAIN && route === "/admin") {
     return (
       <>
+        <DesignTokenProvider />
         <StagingBanner />
         <AdminPage />
         <EditModeToggle />
@@ -68,6 +78,7 @@ export default function App() {
 
   if (route === "/intake") return (
     <>
+      <DesignTokenProvider />
       <StagingBanner />
       <IntakePage />
       <EditModeToggle />
@@ -96,6 +107,7 @@ export default function App() {
     const pageId = route.slice(1); // strip leading "/"
     return (
       <>
+        <DesignTokenProvider />
         <StagingBanner />
         <DynamicPage pageId={pageId} />
         <EditModeToggle />
@@ -105,6 +117,7 @@ export default function App() {
 
   return (
     <>
+      <DesignTokenProvider />
       <StagingBanner />
       <LandingPage />
       <EditModeToggle />
