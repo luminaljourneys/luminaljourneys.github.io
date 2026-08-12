@@ -88,16 +88,29 @@ export default function DynamicPage({ pageId }) {
 
       {/* TOP BAR */}
       <div style={{
-        padding: "1.2rem clamp(1rem, 4vw, 2.5rem)",
+        padding: "1rem clamp(1rem, 4vw, 2.5rem)",
         display: "flex", justifyContent: "space-between", alignItems: "center",
         borderBottom: "1px solid #e5e7eb", background: "#F9F8F6",
       }}>
         <button onClick={() => navigate("/")} style={{
-          fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 600,
-          color: "#172f2d", background: "none", border: "none", cursor: "pointer",
-          letterSpacing: "0.18em", textTransform: "uppercase",
+          display: "flex", alignItems: "center", gap: "0.65rem",
+          background: "none", border: "none", cursor: "pointer", padding: 0,
         }}>
-          <EditableContent contentKey="brand.wordmark" fallback="Luminal Journeys" tag="span" />
+          <img
+            src="/luminaljourneys-primary-logo-mark-gold-transparent.png"
+            alt="Luminal Journeys"
+            style={{ height: 44, width: "auto", display: "block" }}
+          />
+          <div style={{ width: 1, height: 28, background: "rgba(23,47,45,0.1)" }} />
+          <EditableContent
+            contentKey="brand.wordmark"
+            fallback="Luminal Journeys"
+            tag="span"
+            style={{
+              fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600,
+              color: "#172f2d", letterSpacing: "0.18em", textTransform: "uppercase",
+            }}
+          />
         </button>
         <button onClick={() => navigate("/")} style={{
           background: "none", border: "1.5px solid rgba(23,47,45,0.15)",
