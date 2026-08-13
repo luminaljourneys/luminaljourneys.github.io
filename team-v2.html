@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Team — V2 Portrait Cards · Luminal Journeys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --deep:   #172f2d;
+    --teal:   #224e4a;
+    --sage:   #89a99e;
+    --amber:  #bf8a3e;
+    --paper:  #F9F8F6;
+    --card:   #F4F3F1;
+    --sand:   #e6ddd0;
+    --rule:   rgba(23,47,45,0.1);
+    --muted:  rgba(23,47,45,0.65);
+  }
+  body { background: var(--paper); color: var(--deep); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    padding: 1rem 3rem;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--deep);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 0.65rem; cursor: pointer; }
+  .nav-logo img { height: 40px; width: auto; display: block; }
+  .logo-divider { width: 1px; height: 24px; background: rgba(249,248,246,0.2); }
+  .logo-text {
+    font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; color: #F9F8F6;
+  }
+  .nav-back {
+    font-family: 'DM Mono', monospace; font-size: 0.72rem;
+    color: rgba(249,248,246,0.65); background: none; border: none; cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+
+  /* HERO — solid dark */
+  .hero {
+    background: var(--deep);
+    padding: 7rem 3rem 6rem;
+    text-align: center;
+  }
+  .hero-label {
+    display: inline-flex; align-items: center; gap: 1rem;
+    margin-bottom: 2.5rem;
+    background: rgba(249,248,246,0.07);
+    border: 1px solid rgba(249,248,246,0.12);
+    padding: 0.4rem 1.2rem; border-radius: 2rem;
+  }
+  .hero-label span {
+    font-family: 'DM Mono', monospace; font-size: 0.67rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber);
+  }
+  .amber-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+  h1 {
+    font-family: 'DM Serif Display', serif; font-weight: 400;
+    font-size: clamp(2.8rem, 6vw, 5rem); line-height: 1.05;
+    letter-spacing: -0.02em; color: #F9F8F6; max-width: 680px; margin: 0 auto 1.5rem;
+  }
+  h1 em { color: var(--sage); font-style: italic; }
+  .hero-sub {
+    font-size: 1rem; color: rgba(249,248,246,0.65);
+    line-height: 1.8; max-width: 520px; margin: 0 auto;
+  }
+
+  /* STATS STRIP */
+  .stats {
+    background: var(--teal);
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid rgba(249,248,246,0.08);
+  }
+  .stat {
+    padding: 2.5rem 2rem; text-align: center;
+    border-right: 1px solid rgba(249,248,246,0.08);
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-family: 'DM Serif Display', serif; font-size: 2.8rem;
+    font-weight: 400; color: #F9F8F6; letter-spacing: -0.03em; line-height: 1;
+  }
+  .stat-label {
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(249,248,246,0.55); margin-top: 0.5rem;
+  }
+
+  /* CARD GRID */
+  .section-head {
+    padding: 5rem 3rem 2rem;
+    display: flex; align-items: center; gap: 1.5rem;
+  }
+  .section-rule { flex: 1; height: 1px; background: var(--rule); }
+  .section-label {
+    font-family: 'DM Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5px; background: var(--rule);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  .card {
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    transition: background 0.2s;
+  }
+  .card:hover { background: var(--card); }
+
+  /* PHOTO — solid color portrait blocks */
+  .photo {
+    height: 220px; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .photo-initial {
+    font-family: 'DM Serif Display', serif; font-style: italic;
+    font-size: 5.5rem; line-height: 1; color: rgba(249,248,246,0.2);
+    user-select: none;
+  }
+  .photo-badge {
+    position: absolute; bottom: 1rem; right: 1rem;
+    font-family: 'DM Mono', monospace; font-size: 0.58rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(249,248,246,0.7);
+    background: rgba(0,0,0,0.25);
+    padding: 0.28rem 0.7rem; border-radius: 2rem;
+    border: 1px solid rgba(249,248,246,0.1);
+  }
+  .p1 { background: #172f2d; }
+  .p2 { background: #224e4a; }
+  .p3 { background: #2a4a3a; }
+  .p4 { background: #1e3d38; }
+  .p5 { background: #3a4a2e; }
+  .p6 { background: #2d4a48; }
+
+  /* CARD CONTENT */
+  .card-body { padding: 1.8rem 2rem 2.2rem; flex: 1; display: flex; flex-direction: column; }
+  .card-role {
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 0.65rem;
+  }
+  .card-name {
+    font-family: 'DM Serif Display', serif; font-weight: 400;
+    font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.1;
+    color: var(--deep); margin-bottom: 0.35rem;
+  }
+  .card-creds {
+    font-family: 'DM Mono', monospace; font-size: 0.6rem;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 1rem;
+  }
+  .card-rule { height: 1px; background: var(--rule); margin-bottom: 1rem; }
+
+  /* BIO — expandable */
+  .bio-short { font-size: 0.875rem; color: var(--muted); line-height: 1.75; }
+  .bio-full {
+    font-size: 0.875rem; color: var(--muted); line-height: 1.75;
+    display: none; margin-top: 0.75rem;
+    border-top: 1px solid var(--rule); padding-top: 0.75rem;
+  }
+  .bio-full.open { display: block; }
+  .read-more-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.08em; color: var(--teal);
+    margin-top: 0.6rem; text-decoration: underline; text-underline-offset: 2px;
+    text-align: left;
+  }
+  .read-more-btn:hover { color: var(--deep); }
+
+  .card-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: auto; padding-top: 1.2rem; }
+  .tag {
+    font-family: 'DM Mono', monospace; font-size: 0.58rem;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    padding: 0.2rem 0.65rem; border-radius: 2rem;
+    background: var(--card); border: 1px solid var(--rule); color: var(--muted);
+  }
+
+  /* BOTTOM CTA */
+  .cta-strip {
+    background: var(--sand);
+    padding: 5rem 3rem;
+    text-align: center;
+    border-top: 1px solid var(--rule);
+  }
+  .cta-strip h2 {
+    font-family: 'DM Serif Display', serif; font-weight: 400;
+    font-size: clamp(1.8rem, 3.5vw, 3rem); color: var(--deep);
+    margin-bottom: 1rem; letter-spacing: -0.02em;
+  }
+  .cta-strip p { color: var(--muted); font-size: 0.95rem; line-height: 1.8; margin-bottom: 2rem; max-width: 440px; margin-left: auto; margin-right: auto; }
+  .cta-btn {
+    background: var(--deep); color: var(--paper);
+    padding: 0.9rem 2.6rem; border-radius: 2rem;
+    border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 600; letter-spacing: 0.04em;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--deep); padding: 2rem 3rem;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    color: rgba(249,248,246,0.45);
+  }
+  .design-badge {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--deep); color: var(--paper);
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.1em; padding: 0.35rem 0.85rem; border-radius: 2rem;
+    opacity: 0.55;
+  }
+
+  @media (max-width: 760px) {
+    nav { padding: 1rem 1.5rem; }
+    .hero { padding: 5rem 1.5rem 4rem; }
+    .stats { grid-template-columns: 1fr; }
+    .stat { border-right: none; border-bottom: 1px solid rgba(249,248,246,0.08); }
+    .section-head { padding: 3rem 1.5rem 1.5rem; }
+    .grid { grid-template-columns: 1fr; }
+    .cta-strip { padding: 3.5rem 1.5rem; }
+    footer { flex-direction: column; gap: 0.75rem; padding: 1.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <img src="./public/luminaljourneys-primary-logo-mark-gold-transparent.png" alt="Luminal Journeys logo mark">
+    <div class="logo-divider"></div>
+    <span class="logo-text">Luminal Journeys</span>
+  </div>
+  <button class="nav-back">← Home</button>
+</nav>
+
+<section class="hero">
+  <div class="hero-label">
+    <div class="amber-dot"></div>
+    <span>The Collective</span>
+    <div class="amber-dot"></div>
+  </div>
+  <h1>Guided by those who've<br><em>walked inward first.</em></h1>
+  <p class="hero-sub">
+    Every practitioner in our collective holds active clinical licensure,
+    completed formal psychedelic facilitation training, and brings their own
+    ongoing inner work to every session.
+  </p>
+</section>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">6</div>
+    <div class="stat-label">Licensed Practitioners</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">85+</div>
+    <div class="stat-label">Years Combined Experience</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">3</div>
+    <div class="stat-label">Active Research Partnerships</div>
+  </div>
+</div>
+
+<div class="section-head">
+  <div class="section-rule"></div>
+  <span class="section-label">Meet the Team</span>
+  <div class="section-rule"></div>
+</div>
+
+<div class="grid">
+
+  <!-- Wang Si -->
+  <div class="card">
+    <div class="photo p1">
+      <span class="photo-initial">王</span>
+      <span class="photo-badge">Founder & Lead Practitioner</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Founder & Lead Practitioner</div>
+      <div class="card-name">Wang Si (王思)</div>
+      <div class="card-creds">Licensed Psychologist · Quantitative Researcher · Corporate Executive</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">A licensed psychologist who healed personal and intergenerational trauma through psychedelics — transforming from an atheist to a spiritual being. She brings 30 years of lived experience alongside rigorous professional credentials.</p>
+      <div class="bio-full" id="bio-1">
+        <p>As an immigrant child of parents persecuted in the Chinese Cultural Revolution, her life was shaped by systemic atrocities long before she understood them. She also experienced multiple forms of childhood abuse. It was through psychedelics that she healed personal and intergenerational wounds, transformed from an atheist to a spiritual being, and reclaimed her agency and capacity for expansive love.</p>
+        <p style="margin-top:0.75rem;">Professionally, she brings the grounded competence of a licensed psychologist, quantitative researcher, and corporate executive. Spiritually and emotionally, she shows up as a modern mystic, using love as the sorcery to magnify the magnificence of clients. She bridges a critical gap in the psychedelic space: the integrity of competence and safety in an unregulated field.</p>
+        <p style="margin-top:0.75rem;">She specializes in holding space for seekers, leaders, non-conformists, and deeply feeling humans — whether working to break old patterns, heal complex trauma, deconstruct leadership, grow intimate relationships, or navigate spiritual evolution. A queer, polyamorous, neurodiverse woman of color with 30 years of personal psychedelic experience.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-1', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Licensed Psychologist</span>
+        <span class="tag">Trauma</span>
+        <span class="tag">Intergenerational Healing</span>
+        <span class="tag">LGBTQ+ Affirming</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jordan Pierce -->
+  <div class="card">
+    <div class="photo p2">
+      <span class="photo-initial">J</span>
+      <span class="photo-badge">Integration Therapy</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Lead Integration Therapist</div>
+      <div class="card-name">Jordan Pierce</div>
+      <div class="card-creds">LCSW · KAP Certified</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">Jordan specializes in trauma-informed psychedelic integration, working with clients navigating PTSD, chronic grief, and identity transitions.</p>
+      <div class="bio-full" id="bio-2">
+        <p>She trained under Dr. Stanislav Grof in Holotropic Breathwork and completed Ketamine-Assisted Psychotherapy certification through the Integrative Psychiatry Institute. Jordan leads the practice's weekly group integration circles and has developed a proprietary post-journey mapping framework that helps clients translate insights into sustained behavioral change.</p>
+        <p style="margin-top:0.75rem;">Jordan's personal path to this work began with her own grief after losing a sibling — she brings that lived experience to every client encounter. She holds an MSW from the University of Michigan and is licensed in California and Oregon.</p>
+        <p style="margin-top:0.75rem;">She has presented her integration model at the Multidisciplinary Association for Psychedelic Studies (MAPS) annual conference and contributed chapters to two edited volumes on psychedelic therapy.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-2', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Trauma</span>
+        <span class="tag">Grief</span>
+        <span class="tag">KAP</span>
+        <span class="tag">Groups</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Amirah Roth -->
+  <div class="card">
+    <div class="photo p3">
+      <span class="photo-initial">A</span>
+      <span class="photo-badge">Clinical Psychology</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Clinical Psychologist</div>
+      <div class="card-name">Dr. Amirah Roth</div>
+      <div class="card-creds">PhD · Licensed Clinical Psychologist</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">Amirah's research in non-ordinary states of consciousness at Johns Hopkins informs her clinical practice and how she reads the arc of each client's journey.</p>
+      <div class="bio-full" id="bio-3">
+        <p>She has co-authored three peer-reviewed papers on psilocybin-assisted therapy for existential distress in life-limiting illness, published in <em>Psychopharmacology</em> and <em>The Journal of Psychedelic Studies</em>.</p>
+        <p style="margin-top:0.75rem;">Dr. Roth trained in cognitive-behavioral therapy and acceptance-commitment therapy before pivoting to psychedelic research. She believes the two domains are complementary: the scaffolding of CBT helps clients make durable use of the insights that emerge in expanded states.</p>
+        <p style="margin-top:0.75rem;">She earned her PhD at New York University and completed postdoctoral research at the Johns Hopkins Center for Psychedelic and Consciousness Research. She currently holds an adjunct faculty appointment at CIIS.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-3', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Research</span>
+        <span class="tag">Psilocybin</span>
+        <span class="tag">Existential</span>
+        <span class="tag">CBT/ACT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Marco Silva -->
+  <div class="card">
+    <div class="photo p4">
+      <span class="photo-initial">M</span>
+      <span class="photo-badge">Somatic Therapy</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Somatic Therapist & Medical Monitor</div>
+      <div class="card-name">Marco Silva</div>
+      <div class="card-creds">RN · Somatic Experiencing Practitioner</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">A former ICU nurse, Marco bridges the physiological and psychological dimensions of psychedelic work with rare precision and presence.</p>
+      <div class="bio-full" id="bio-4">
+        <p>He spent nine years in critical care before earning his Somatic Experiencing Practitioner certification through the Foundation for Human Enrichment. Marco monitors medical safety during all dosing sessions and leads the practice's breathwork program and body-centered integration practices.</p>
+        <p style="margin-top:0.75rem;">His clinical philosophy centers on the body as the primary site of healing — he often works with clients on titrating arousal and completing interrupted defensive responses that psychedelics can surface but not always resolve on their own.</p>
+        <p style="margin-top:0.75rem;">Marco holds a BSN from California State University and advanced training in polyvagal-informed care. He is fluent in English and Portuguese.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-4', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Somatic</span>
+        <span class="tag">Breathwork</span>
+        <span class="tag">Medical Safety</span>
+        <span class="tag">Polyvagal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leila Okonkwo -->
+  <div class="card">
+    <div class="photo p5">
+      <span class="photo-initial">L</span>
+      <span class="photo-badge">Group Facilitation</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Group Facilitation Lead</div>
+      <div class="card-name">Leila Okonkwo</div>
+      <div class="card-creds">LPC · Certified Facilitator, CIIS</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">Leila weaves indigenous ceremony protocols with evidence-based therapeutic frameworks to create containers that are both structured and spacious.</p>
+      <div class="bio-full" id="bio-5">
+        <p>Certified through the California Institute of Integral Studies, she has facilitated over 200 group psilocybin journeys across the US and Netherlands. Leila trained with Mazatec lineage holders in Oaxaca and has received explicit permission to carry and teach those practices in Western clinical contexts.</p>
+        <p style="margin-top:0.75rem;">Her LPC training focused on multicultural competency and community-based approaches, which she now applies to building diverse client communities around shared psychedelic exploration. She facilitates a monthly integration circle specifically for people of color navigating psychedelic experiences within contexts of intergenerational trauma.</p>
+        <p style="margin-top:0.75rem;">Leila is fluent in English and Yoruba, and conversational in Spanish. She is also a trained death doula and incorporates end-of-life perspectives into her work with existential distress.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-5', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Ceremony</span>
+        <span class="tag">Indigenous</span>
+        <span class="tag">Group</span>
+        <span class="tag">Multicultural</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thomas Wren -->
+  <div class="card">
+    <div class="photo p6">
+      <span class="photo-initial">T</span>
+      <span class="photo-badge">Integrative Medicine</span>
+    </div>
+    <div class="card-body">
+      <div class="card-role">Integrative Medicine Physician</div>
+      <div class="card-name">Dr. Thomas Wren</div>
+      <div class="card-creds">MD · Integrative Medicine Fellowship</div>
+      <div class="card-rule"></div>
+      <p class="bio-short">Dr. Wren's training spans Ayurveda, functional medicine, and psychedelic pharmacology — making him uniquely suited to assess and support each client's full health picture.</p>
+      <div class="bio-full" id="bio-6">
+        <p>He conducts all intake medical screenings, reviews medication interaction risks, and tailors preparatory protocols to each client's physiology. His work has a particular focus on complex cases involving multiple psychiatric medications and clients who have previously been told they cannot participate in psychedelic therapy.</p>
+        <p style="margin-top:0.75rem;">Dr. Wren completed his integrative medicine fellowship at the University of Arizona and additional training in Ayurvedic medicine in Kerala, India. He has consulted for four psychedelic therapy clinics on developing safe deprescribing protocols for SSRI tapering prior to psilocybin sessions.</p>
+        <p style="margin-top:0.75rem;">He is board-certified in internal medicine and serves on the advisory board of the Psychedelic Medicine Coalition. He approaches each client encounter as an act of systemic medicine — attending to root causes rather than symptom management.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-6', this)">Read more +</button>
+      <div class="card-tags">
+        <span class="tag">Pharmacology</span>
+        <span class="tag">Screening</span>
+        <span class="tag">Ayurveda</span>
+        <span class="tag">SSRI Taper</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="cta-strip">
+  <h2>Ready to meet your guide?</h2>
+  <p>We match each client to the practitioner best suited for their intention, history, and needs.</p>
+  <button class="cta-btn">Book a Consultation</button>
+</div>
+
+<footer>
+  <span>© 2026 Luminal Journeys · All rights reserved</span>
+  <span>Licensed · Certified · Committed</span>
+</footer>
+
+<div class="design-badge">V2 — Portrait Cards</div>
+
+<script>
+function toggleBio(id, btn) {
+  const full = document.getElementById(id);
+  const isOpen = full.classList.contains('open');
+  full.classList.toggle('open');
+  btn.textContent = isOpen ? 'Read more +' : 'Read less −';
+}
+</script>
+</body>
+</html>

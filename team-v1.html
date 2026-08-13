@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Team — V1 Editorial Roster · Luminal Journeys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --deep:   #172f2d;
+    --teal:   #224e4a;
+    --sage:   #89a99e;
+    --amber:  #bf8a3e;
+    --paper:  #F9F8F6;
+    --card:   #F4F3F1;
+    --sand:   #e6ddd0;
+    --rule:   rgba(23,47,45,0.1);
+    --muted:  rgba(23,47,45,0.65);
+  }
+  body { background: var(--paper); color: var(--deep); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    padding: 1rem 4rem;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0;
+    background: rgba(249,248,246,0.97);
+    backdrop-filter: blur(16px); z-index: 10;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 0.65rem; text-decoration: none; cursor: pointer; }
+  .nav-logo img { height: 44px; width: auto; display: block; }
+  .logo-divider { width: 1px; height: 26px; background: var(--rule); }
+  .logo-text {
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--deep);
+  }
+  .nav-back {
+    font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.04em; background: none; border: none; cursor: pointer;
+  }
+
+  /* HERO */
+  .hero { padding: 7rem 4rem 5rem; border-bottom: 1px solid var(--rule); }
+  .hero-label { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 3rem; }
+  .amber-line { height: 1px; width: 48px; background: var(--amber); }
+  .hero-label span {
+    font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber);
+  }
+  h1 {
+    font-family: 'DM Serif Display', serif; font-weight: 400;
+    font-size: clamp(3.5rem, 7vw, 6.5rem); line-height: 0.95;
+    letter-spacing: -0.03em; color: var(--deep); max-width: 700px;
+  }
+  h1 em { color: var(--teal); font-style: italic; }
+  .hero-sub {
+    margin-top: 2.5rem; max-width: 560px;
+    font-size: 1.05rem; color: var(--muted); line-height: 1.8;
+  }
+
+  /* MEMBER LIST */
+  .roster { border-top: 1px solid var(--rule); }
+  .member {
+    display: grid;
+    grid-template-columns: 72px 260px 1fr auto;
+    gap: 3rem; padding: 3.5rem 4rem;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+    transition: background 0.2s;
+  }
+  .member:hover { background: var(--sand); }
+
+  .member-num {
+    font-family: 'DM Serif Display', serif; font-style: italic;
+    font-size: 1.5rem; color: var(--muted); padding-top: 0.2rem;
+  }
+  .member-name {
+    font-family: 'DM Serif Display', serif; font-weight: 400;
+    font-size: clamp(1.5rem, 2vw, 2rem); letter-spacing: -0.02em;
+    line-height: 1.1; color: var(--deep);
+  }
+  .member-creds {
+    margin-top: 0.6rem;
+    font-family: 'DM Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.1em; color: var(--amber); text-transform: uppercase;
+  }
+  .member-role {
+    font-family: 'DM Mono', monospace; font-size: 0.7rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); padding-top: 0.4rem; margin-bottom: 0.85rem;
+  }
+  .member-bio { font-size: 0.9rem; color: var(--muted); line-height: 1.75; }
+  .bio-full {
+    font-size: 0.9rem; color: var(--muted); line-height: 1.75;
+    display: none; margin-top: 0.75rem;
+    border-top: 1px solid var(--rule); padding-top: 0.75rem;
+  }
+  .bio-full.open { display: block; }
+  .bio-full p + p { margin-top: 0.65rem; }
+  .read-more-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.08em; color: var(--teal);
+    margin-top: 0.55rem; text-decoration: underline; text-underline-offset: 2px;
+    display: block;
+  }
+  .read-more-btn:hover { color: var(--deep); }
+  .member-tags { display: flex; gap: 0.45rem; flex-wrap: wrap; padding-top: 0.3rem; align-items: flex-start; }
+  .tag {
+    font-family: 'DM Mono', monospace; font-size: 0.6rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.22rem 0.7rem; border-radius: 2rem;
+    border: 1px solid var(--rule); color: var(--muted);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 2.5rem 4rem;
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px solid var(--rule);
+    font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted);
+  }
+  .design-badge {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--deep); color: var(--paper);
+    font-family: 'DM Mono', monospace; font-size: 0.62rem;
+    letter-spacing: 0.1em; padding: 0.35rem 0.85rem; border-radius: 2rem;
+    opacity: 0.55;
+  }
+
+  @media (max-width: 900px) {
+    nav { padding: 1rem 1.5rem; }
+    .hero { padding: 5rem 1.5rem 3rem; }
+    .member { grid-template-columns: 1fr; gap: 1rem; padding: 2.5rem 1.5rem; }
+    .member-num { display: none; }
+    footer { flex-direction: column; gap: 1rem; padding: 2rem 1.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <img src="./public/luminaljourneys-primary-logo-mark-gold-transparent.png" alt="Luminal Journeys logo mark">
+    <div class="logo-divider"></div>
+    <span class="logo-text">Luminal Journeys</span>
+  </div>
+  <button class="nav-back">← Home</button>
+</nav>
+
+<section class="hero">
+  <div class="hero-label">
+    <div class="amber-line"></div>
+    <span>Our Collective · Licensed Practitioners</span>
+  </div>
+  <h1>
+    The people who<br>
+    <em>hold the space.</em>
+  </h1>
+  <p class="hero-sub">
+    Every member of our collective holds active licensure in healthcare or mental health,
+    formal psychedelic facilitation training, and a personal commitment to ongoing inner work.
+  </p>
+</section>
+
+<div class="roster">
+
+  <div class="member">
+    <div class="member-num">I</div>
+    <div>
+      <div class="member-name">Wang Si (王思)</div>
+      <div class="member-creds">Licensed Psychologist · Founder & Lead Practitioner</div>
+    </div>
+    <div>
+      <div class="member-role">Founder & Lead Practitioner</div>
+      <p class="member-bio">Wang Si is a licensed psychologist, quantitative researcher, and corporate executive who healed personal and intergenerational trauma through psychedelics — transforming from an atheist to a spiritual being. As the daughter of Chinese Cultural Revolution survivors, and a queer, polyamorous, neurodiverse woman of color, she brings 30 years of lived experience alongside rigorous professional credentials.</p>
+      <div class="bio-full" id="bio-1">
+        <p>As an immigrant child of parents persecuted in the Chinese Cultural Revolution, her life was shaped by systemic atrocities long before she understood them. She also experienced multiple forms of childhood abuse. It was through psychedelics that she healed personal and intergenerational wounds, transformed from an atheist to a spiritual being, and reclaimed her agency and capacity for expansive love. She didn't just study human transformation — she lived it.</p>
+        <p>Professionally, she brings the grounded competence of a licensed psychologist, quantitative researcher, and corporate executive. Spiritually and emotionally, she shows up as a modern mystic, using love as the sorcery to magnify the magnificence of clients. Her clinical background gave her the tools to understand the human mind; her research and leadership experiences gave her the rigor to focus on practical outcomes; and her lived experience gave her the empathy, spiritual wisdom, and intuition to meet people in their darkest, most complex places.</p>
+        <p>Today, she bridges a critical gap in the psychedelic space: the integrity of competence and safety in an unregulated field. She combines licensed professional expertise with 30 years of personal psychedelic experience, so clients don't have to choose between rigorous qualification and real-world experience. She specializes in holding space for seekers, leaders, non-conformists, and deeply feeling humans — whether working to break old patterns, heal complex trauma, deconstruct leadership, grow intimate relationships, or navigate spiritual evolution.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-1', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Licensed Psychologist</span>
+      <span class="tag">Trauma</span>
+      <span class="tag">Intergenerational Healing</span>
+      <span class="tag">LGBTQ+ Affirming</span>
+    </div>
+  </div>
+
+  <div class="member">
+    <div class="member-num">II</div>
+    <div>
+      <div class="member-name">Jordan Pierce</div>
+      <div class="member-creds">LCSW · KAP Certified</div>
+    </div>
+    <div>
+      <div class="member-role">Lead Integration Therapist</div>
+      <p class="member-bio">Jordan specializes in trauma-informed psychedelic integration, working with clients navigating PTSD, chronic grief, and identity transitions. She trained under Dr. Stanislav Grof and leads our weekly group integration circles.</p>
+      <div class="bio-full" id="bio-2">
+        <p>She completed Ketamine-Assisted Psychotherapy certification through the Integrative Psychiatry Institute and developed the practice's proprietary post-journey mapping framework — a structured tool for translating session insights into sustained behavioral change across the integration period.</p>
+        <p>Jordan holds an MSW from the University of Michigan and is licensed in California and Oregon. She has presented at the MAPS annual conference and contributed chapters to two edited volumes on psychedelic-assisted therapy. Her personal experience with grief informs her deep attunement to loss as a portal for transformation.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-2', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Trauma</span>
+      <span class="tag">Grief</span>
+      <span class="tag">Group Work</span>
+      <span class="tag">KAP</span>
+    </div>
+  </div>
+
+  <div class="member">
+    <div class="member-num">III</div>
+    <div>
+      <div class="member-name">Dr. Amirah Roth</div>
+      <div class="member-creds">PhD · Licensed Clinical Psychologist</div>
+    </div>
+    <div>
+      <div class="member-role">Clinical Psychologist</div>
+      <p class="member-bio">Amirah's research in non-ordinary states of consciousness at Johns Hopkins informs her clinical practice. She has co-authored three peer-reviewed papers on psilocybin-assisted therapy for existential distress.</p>
+      <div class="bio-full" id="bio-3">
+        <p>Published in <em>Psychopharmacology</em> and <em>The Journal of Psychedelic Studies</em>, her work focuses specifically on clients with life-limiting illness and the role expanded states play in shifting relationship to mortality. She integrates CBT and acceptance-commitment therapy with psychedelic facilitation.</p>
+        <p>Dr. Roth earned her PhD at New York University and completed postdoctoral research at the Johns Hopkins Center for Psychedelic and Consciousness Research. She holds an adjunct faculty appointment at CIIS and supervises emerging practitioners entering the field.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-3', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Research</span>
+      <span class="tag">Psilocybin</span>
+      <span class="tag">Existential</span>
+      <span class="tag">ACT / CBT</span>
+    </div>
+  </div>
+
+  <div class="member">
+    <div class="member-num">IV</div>
+    <div>
+      <div class="member-name">Marco Silva</div>
+      <div class="member-creds">RN · Somatic Experiencing Practitioner</div>
+    </div>
+    <div>
+      <div class="member-role">Somatic Therapist & Medical Monitor</div>
+      <p class="member-bio">A former ICU nurse turned somatic therapist, Marco bridges the physiological and psychological aspects of psychedelic work. He monitors medical safety during sessions and leads breathwork and body-centered integration practices.</p>
+      <div class="bio-full" id="bio-4">
+        <p>After nine years in critical care, Marco earned his Somatic Experiencing Practitioner certification through the Foundation for Human Enrichment. His clinical philosophy centers on the body as the primary site of healing — he works with clients to titrate arousal and complete interrupted defensive responses that psychedelics can surface but may not resolve on their own.</p>
+        <p>Marco holds a BSN from California State University and advanced training in polyvagal-informed care. He is fluent in English and Portuguese and regularly works with clients navigating cross-cultural dimensions of psychedelic experience.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-4', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Somatic</span>
+      <span class="tag">Breathwork</span>
+      <span class="tag">Medical Safety</span>
+      <span class="tag">Polyvagal</span>
+    </div>
+  </div>
+
+  <div class="member">
+    <div class="member-num">V</div>
+    <div>
+      <div class="member-name">Leila Okonkwo</div>
+      <div class="member-creds">LPC · Certified Facilitator, CIIS</div>
+    </div>
+    <div>
+      <div class="member-role">Group Facilitation Lead</div>
+      <p class="member-bio">Leila weaves indigenous ceremony protocols with evidence-based therapeutic frameworks. Certified through CIIS, she has facilitated over 200 group journeys across the US and Netherlands.</p>
+      <div class="bio-full" id="bio-5">
+        <p>She trained with Mazatec lineage holders in Oaxaca and carries explicit permission to teach those practices in Western clinical contexts. Her LPC training emphasized multicultural competency, which she applies in facilitating a monthly integration circle specifically for people of color navigating psychedelic experiences within contexts of intergenerational trauma.</p>
+        <p>Leila is fluent in English and Yoruba, conversational in Spanish, and a trained death doula. She incorporates end-of-life perspectives into her work with existential distress — a practice she considers among the most sacred aspects of her clinical role.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-5', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Ceremony</span>
+      <span class="tag">Indigenous</span>
+      <span class="tag">Group</span>
+      <span class="tag">Multicultural</span>
+    </div>
+  </div>
+
+  <div class="member">
+    <div class="member-num">VI</div>
+    <div>
+      <div class="member-name">Dr. Thomas Wren</div>
+      <div class="member-creds">MD · Integrative Medicine Fellowship</div>
+    </div>
+    <div>
+      <div class="member-role">Integrative Medicine Physician</div>
+      <p class="member-bio">Dr. Wren's training spans Ayurveda, functional medicine, and psychedelic pharmacology. He conducts all medical screenings and tailors protocols to each client's physiology, medications, and full health history.</p>
+      <div class="bio-full" id="bio-6">
+        <p>He has a particular focus on complex cases involving multiple psychiatric medications and clients previously advised they cannot participate in psychedelic therapy. He has consulted for four psychedelic therapy clinics on developing safe SSRI deprescribing protocols for psilocybin preparation.</p>
+        <p>Dr. Wren completed his integrative medicine fellowship at the University of Arizona and additional training in Ayurvedic medicine in Kerala, India. He is board-certified in internal medicine and serves on the advisory board of the Psychedelic Medicine Coalition.</p>
+      </div>
+      <button class="read-more-btn" onclick="toggleBio('bio-6', this)">Read more +</button>
+    </div>
+    <div class="member-tags">
+      <span class="tag">Pharmacology</span>
+      <span class="tag">Screening</span>
+      <span class="tag">Ayurveda</span>
+      <span class="tag">SSRI Taper</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>© 2026 Luminal Journeys · All rights reserved</span>
+  <span>Licensed · Certified · Committed</span>
+</footer>
+
+<div class="design-badge">V1 — Editorial Roster</div>
+
+<script>
+function toggleBio(id, btn) {
+  const full = document.getElementById(id);
+  const isOpen = full.classList.contains('open');
+  full.classList.toggle('open');
+  btn.textContent = isOpen ? 'Read more +' : 'Read less −';
+}
+</script>
+</body>
+</html>

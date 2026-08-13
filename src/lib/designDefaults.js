@@ -28,8 +28,7 @@ export const DESIGN_TOKENS = {
     minPt:           7,
     maxPt:           22,
     wcagMinPt:       12,    // WCAG AA — normal text legibility floor
-    referenceImage:  "/design-reference/ref-body.png",
-    referenceCaption: "The paragraph text on the right — \"The psychedelic industry is not regulated…\"",
+    referenceCaption: "The paragraph text that appears below section headings throughout the site.",
   },
   heading: {
     label:           "Headings & Section Titles",
@@ -41,8 +40,7 @@ export const DESIGN_TOKENS = {
     minPt:           14,
     maxPt:           72,
     wcagMinPt:       14,    // WCAG large text threshold
-    referenceImage:  "/design-reference/ref-heading.png",
-    referenceCaption: "The bold heading — \"Competence without compromise\"",
+    referenceCaption: "The bold section title — 'Competence without compromise'. The italic Roman numeral 'I' to the left is a separate decorative style and is not controlled by this slider.",
   },
   nav: {
     label:           "Navigation Links",
@@ -54,8 +52,7 @@ export const DESIGN_TOKENS = {
     minPt:           7,
     maxPt:           16,
     wcagMinPt:       9,     // 12px minimum for interactive touch targets
-    referenceImage:  "/design-reference/ref-nav.png",
-    referenceCaption: "The navigation links at the top of every page",
+    referenceCaption: "The page links in the navigation bar at the top of every page.",
   },
   form: {
     label:           "Form Labels & Inputs",
@@ -67,8 +64,7 @@ export const DESIGN_TOKENS = {
     minPt:           7,
     maxPt:           18,
     wcagMinPt:       10,
-    referenceImage:  null,  // add /design-reference/ref-form.png when screenshot is ready
-    referenceCaption: "Labels and text fields on the intake form page (/intake)",
+    referenceCaption: "Labels and input fields on the intake form (/intake).",
   },
   micro: {
     label:           "Micro Labels",
@@ -80,8 +76,7 @@ export const DESIGN_TOKENS = {
     minPt:           6,
     maxPt:           14,
     wcagMinPt:       8,
-    referenceImage:  "/design-reference/ref-micro.png",
-    referenceCaption: "\"COMBINED EXPERIENCE IN WELLNESS & HEALTHCARE\" — the small caps labels",
+    referenceCaption: "The small uppercase labels beneath the stat numbers on the home page.",
   },
 };
 
