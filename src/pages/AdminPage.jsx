@@ -1095,12 +1095,12 @@ function PublishTab() {
     <div style={{ maxWidth: 560 }}>
       <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: "1.4rem", color: "#172f2d", marginBottom: "0.5rem" }}>Publish to Production</div>
       <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#3a5450", lineHeight: 1.7, marginBottom: "2rem" }}>
-        When you're happy with everything on staging, click Publish to push your content changes — text edits, form configuration, and dynamic pages — live to <strong>luminaljourneys.com</strong> instantly. No redeploy needed.
+        When you're happy with everything on staging, click Publish to push your content changes — text edits, form configuration, dynamic pages, and design settings — live to <strong>luminaljourneys.com</strong> instantly. No redeploy needed.
       </p>
 
       <div style={{ background: "#e6ddd0", borderRadius: "0.8rem", padding: "1.4rem 1.6rem", marginBottom: "2rem", border: "1px solid rgba(23,47,45,0.1)" }}>
         <div style={{ ...S.labelMono, marginBottom: "0.8rem" }}>What gets published</div>
-        {[["Text content edits", "All copy changes made via the inline editor"], ["Form configuration", "Steps, fields, options, and order"], ["Dynamic pages", "All pages created in the Pages tab"]].map(([title, desc]) => (
+        {[["Text content edits", "All copy changes made via the inline editor"], ["Form configuration", "Steps, fields, options, and order"], ["Dynamic pages", "All pages created in the Pages tab"], ["Design settings", "Typography sizes and font colors from the Design tab"]].map(([title, desc]) => (
           <div key={title} style={{ display: "flex", gap: "0.75rem", marginBottom: "0.7rem", alignItems: "flex-start" }}>
             <span style={{ color: "#bf8a3e", fontSize: "0.9rem", marginTop: "0.05rem" }}>✦</span>
             <div>

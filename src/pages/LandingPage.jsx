@@ -265,9 +265,11 @@ export default function LandingPage() {
       </div>
 
       {/* PRINCIPLES */}
-      <div id="principles">
+      {/* scrollMarginTop offsets the sticky nav height so the anchor scroll
+          doesn't leave "Our Practice" hidden behind the nav bar */}
+      <div id="principles" style={{ scrollMarginTop: "5rem" }}>
         {/* Section label — mirrors THE PROCESS divider pattern */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: mobile ? "3rem 1.5rem 0" : "6rem 4rem 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: mobile ? "3.5rem 1.5rem 0" : "6.5rem 4rem 0" }}>
           <EditableContent contentKey="principles.section.label" fallback="Our Practice" tag="span" style={{ fontSize: "var(--lj-size-micro, 0.68rem)", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }} />
           <div style={{ flex: 1, height: 1, background: B.rule }} />
         </div>
