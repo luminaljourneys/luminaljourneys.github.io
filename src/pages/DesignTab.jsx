@@ -1,15 +1,23 @@
 /**
  * DesignTab.jsx — Luminal Journeys
- * Typography design controls for admin users.
+ * Typography and color design controls for admin users.
  *
- * Tie can set font sizes (in pt) for each text category.
- * Changes apply globally across the site immediately after saving.
- * WCAG minimum warnings display when below accessible thresholds.
+ * Per text category, Tie can set:
+ *   - Font size (pt) via stepper + slider
+ *   - Font color via native color picker
+ *
+ * Color picker shows:
+ *   - Current (draft) color as a clickable swatch
+ *   - Hex value
+ *   - "Was" swatch — the last saved color — so she can revert with one click
+ *
+ * Changes are live-previewed in the admin immediately.
+ * Publish Live copies all design settings to production.
  */
 
 import { useState, useEffect } from 'react';
 import { useDesignTokens }    from '../hooks/useDesignTokens.js';
-import { DESIGN_TOKENS, defaultPtValues, applyDesignTokens } from '../lib/designDefaults.js';
+import { DESIGN_TOKENS, defaultPtValues, defaultColors, applyDesignTokens } from '../lib/designDefaults.js';
 
 const B = {
   deep:   "#172f2d",
@@ -52,9 +60,126 @@ function WcagBadge({ pt, wcagMinPt }) {
   );
 }
 
+// ── Color picker row ──────────────────────────────────────────────────────────
+// Shows: [swatch → opens native picker] [hex] [was: previous swatch (click to revert)]
+function ColorRow({ tokenKey, def, colorValue, savedColor, onChange }) {
+  const isChanged   = colorValue !== savedColor;
+  const isDefault   = colorValue === def.defaultColor;
+  const savedIsDefault = savedColor === def.defaultColor;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: "0.75rem",
+      padding: "0.75rem 0",
+      borderTop: `1px solid ${B.border}`,
+    }}>
+      {/* Label */}
+      <div style={{
+        fontSize: "0.72rem", color: B.sage,
+        fontFamily: "var(--font-mono, monospace)",
+        minWidth: "5rem", flexShrink: 0,
+      }}>
+        Font color
+      </div>
+
+      {/* Clickable color swatch — opens native picker */}
+      <label
+        title="Click to change color"
+        style={{ position: "relative", flexShrink: 0, cursor: "pointer" }}
+      >
+        <input
+          type="color"
+          value={colorValue}
+          onChange={e => onChange(e.target.value)}
+          aria-label={`${def.label} font color`}
+          style={{
+            opacity: 0,
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            cursor: "pointer",
+            border: "none",
+            padding: 0,
+          }}
+        />
+        <div style={{
+          width: 34, height: 34,
+          borderRadius: "0.45rem",
+          background: colorValue,
+          border: `2px solid ${B.border}`,
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
+          flexShrink: 0,
+        }} />
+      </label>
+
+      {/* Hex value */}
+      <span style={{
+        fontFamily: "var(--font-mono, monospace)",
+        fontSize: "0.82rem",
+        color: B.deep,
+        letterSpacing: "0.04em",
+        flex: 1,
+      }}>
+        {colorValue}
+      </span>
+
+      {/* Reset to default — only shows if not at default */}
+      {!isDefault && (
+        <button
+          onClick={() => onChange(def.defaultColor)}
+          title={`Reset to default (${def.defaultColor})`}
+          style={{
+            fontSize: "0.68rem", color: B.sage,
+            background: "none", border: "none",
+            cursor: "pointer",
+            fontFamily: "var(--font-mono, monospace)",
+            padding: "0.15rem 0.35rem",
+            flexShrink: 0,
+          }}
+        >↺ default</button>
+      )}
+
+      {/* "Was" — previous saved color, shown when draft differs from saved */}
+      {isChanged && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.4rem",
+          flexShrink: 0,
+        }}>
+          <span style={{
+            fontSize: "0.68rem", color: B.sage,
+            fontFamily: "var(--font-mono, monospace)",
+          }}>was</span>
+          <button
+            onClick={() => onChange(savedColor)}
+            title={`Revert to previous saved color (${savedColor})`}
+            style={{
+              width: 26, height: 26,
+              borderRadius: "0.35rem",
+              background: savedColor,
+              border: `1.5px solid ${B.border}`,
+              cursor: "pointer",
+              padding: 0,
+              flexShrink: 0,
+            }}
+            aria-label={`Revert to previous color ${savedColor}`}
+          />
+          <span style={{
+            fontSize: "0.65rem", color: B.sage,
+            fontFamily: "var(--font-mono, monospace)",
+          }}>
+            {savedColor}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Single token card ─────────────────────────────────────────────────────────
-function TokenCard({ tokenKey, def, ptValue, onChange }) {
+function TokenCard({ tokenKey, def, ptValue, colorValue, savedColor, onPtChange, onColorChange }) {
   const pt          = ptValue ?? def.defaultPt;
+  const color       = colorValue ?? def.defaultColor;
   const previewSize = `${(pt / 12).toFixed(4)}rem`;
   const isDefault   = pt === def.defaultPt;
 
@@ -79,23 +204,23 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
         </div>
         {!isDefault && (
           <button
-            onClick={() => onChange(def.defaultPt)}
-            title="Reset to default"
+            onClick={() => onPtChange(def.defaultPt)}
+            title="Reset size to default"
             style={{
               fontSize: "0.7rem", color: B.sage, background: "none", border: "none",
               cursor: "pointer", fontFamily: "var(--font-mono, monospace)",
               padding: "0.2rem 0.4rem", marginTop: "-0.1rem", flexShrink: 0,
             }}
-          >↺ reset</button>
+          >↺ reset size</button>
         )}
       </div>
 
-      {/* Stepper row */}
+      {/* Size stepper row */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
 
         <button
-          onClick={() => onChange(Math.max(def.minPt, +(pt - STEP).toFixed(1)))}
-          aria-label={`Decrease ${def.label}`}
+          onClick={() => onPtChange(Math.max(def.minPt, +(pt - STEP).toFixed(1)))}
+          aria-label={`Decrease ${def.label} size`}
           style={{
             width: 34, height: 34, flexShrink: 0,
             border: `1px solid ${B.border}`, borderRadius: "0.4rem",
@@ -117,8 +242,8 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
         </div>
 
         <button
-          onClick={() => onChange(Math.min(def.maxPt, +(pt + STEP).toFixed(1)))}
-          aria-label={`Increase ${def.label}`}
+          onClick={() => onPtChange(Math.min(def.maxPt, +(pt + STEP).toFixed(1)))}
+          aria-label={`Increase ${def.label} size`}
           style={{
             width: 34, height: 34, flexShrink: 0,
             border: `1px solid ${B.border}`, borderRadius: "0.4rem",
@@ -134,12 +259,11 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
           max={def.maxPt}
           step={STEP}
           value={pt}
-          onChange={e => onChange(+e.target.value)}
+          onChange={e => onPtChange(+e.target.value)}
           aria-label={`${def.label} size in points`}
           style={{ flex: 1, accentColor: B.teal, height: 4, cursor: "pointer" }}
         />
 
-        {/* Range endpoints */}
         <div style={{
           fontSize: "0.65rem", color: B.sage,
           fontFamily: "var(--font-mono, monospace)", whiteSpace: "nowrap",
@@ -148,10 +272,19 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
         </div>
       </div>
 
-      {/* WCAG warning */}
+      {/* WCAG size warning */}
       <WcagBadge pt={pt} wcagMinPt={def.wcagMinPt} />
 
-      {/* Live preview */}
+      {/* Color picker row */}
+      <ColorRow
+        tokenKey={tokenKey}
+        def={def}
+        colorValue={color}
+        savedColor={savedColor ?? def.defaultColor}
+        onChange={onColorChange}
+      />
+
+      {/* Live preview — uses current draft size + color */}
       <div style={{
         padding: "0.85rem 1rem",
         background: B.paper,
@@ -164,7 +297,7 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
         }}>
           Preview · {(pt / 12 * 16).toFixed(1)}px
         </div>
-        <div style={{ fontSize: previewSize, color: B.deep, lineHeight: 1.6 }}>
+        <div style={{ fontSize: previewSize, color, lineHeight: 1.6 }}>
           The quiet power of inner clarity.
         </div>
       </div>
@@ -174,38 +307,56 @@ function TokenCard({ tokenKey, def, ptValue, onChange }) {
 
 // ── Main Design tab ───────────────────────────────────────────────────────────
 export default function DesignTab() {
-  const { ptValues: savedValues, saveTokens, loading, saving } = useDesignTokens();
-  const [draft, setDraft] = useState(null);
-  const [saved, setSaved] = useState(false);
+  const {
+    ptValues: savedPt,
+    colors:   savedColors,
+    saveTokens,
+    loading,
+    saving,
+  } = useDesignTokens();
 
-  // Seed draft once saved values load
-  useEffect(() => {
-    if (!loading && draft === null) setDraft({ ...savedValues });
-  }, [loading, savedValues, draft]);
+  // draft holds both pt values and colors together
+  const [draft,  setDraft]  = useState(null);   // { pt: {...}, colors: {...} }
+  const [saved,  setSaved]  = useState(false);
 
-  // Live-preview: apply draft to CSS vars immediately (admin sees changes as they drag)
+  // Seed draft once Firestore values load
   useEffect(() => {
-    if (draft) applyDesignTokens(draft);
+    if (!loading && draft === null) {
+      setDraft({ pt: { ...savedPt }, colors: { ...savedColors } });
+    }
+  }, [loading, savedPt, savedColors, draft]);
+
+  // Live-preview: apply draft to CSS vars immediately as she changes anything
+  useEffect(() => {
+    if (draft) applyDesignTokens(draft.pt, draft.colors);
   }, [draft]);
 
-  const handleChange = (key, pt) => {
-    setDraft(d => ({ ...d, [key]: pt }));
+  const handlePtChange = (key, pt) => {
+    setDraft(d => ({ ...d, pt: { ...d.pt, [key]: pt } }));
+    setSaved(false);
+  };
+
+  const handleColorChange = (key, color) => {
+    setDraft(d => ({ ...d, colors: { ...d.colors, [key]: color } }));
     setSaved(false);
   };
 
   const handleSave = async () => {
     if (!draft) return;
-    await saveTokens(draft);
+    await saveTokens(draft.pt, draft.colors);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   const handleReset = () => {
-    setDraft(defaultPtValues());
+    setDraft({ pt: defaultPtValues(), colors: defaultColors() });
     setSaved(false);
   };
 
-  const hasChanges = draft && JSON.stringify(draft) !== JSON.stringify(savedValues);
+  const hasChanges = draft && (
+    JSON.stringify(draft.pt)     !== JSON.stringify(savedPt) ||
+    JSON.stringify(draft.colors) !== JSON.stringify(savedColors)
+  );
 
   if (loading || !draft) {
     return (
@@ -228,14 +379,15 @@ export default function DesignTab() {
           fontSize: "1.6rem", fontWeight: 400, color: B.deep,
           margin: 0, marginBottom: "0.5rem",
         }}>
-          Typography Controls
+          Typography & Color Controls
         </h2>
         <p style={{
           fontSize: "0.82rem", color: B.sage,
           fontFamily: "var(--font-mono, monospace)", margin: 0, lineHeight: 1.6,
         }}>
-          Set font sizes for each text category. Sizes are in <strong style={{ color: B.deep }}>points (pt)</strong> — the same unit used in Word and Google Docs.
-          12pt = standard body text. Changes apply globally across the site after saving.
+          Set font sizes and colors for each text category. Sizes are in{" "}
+          <strong style={{ color: B.deep }}>points (pt)</strong> — same as Word and Google Docs.
+          12pt = standard body text. Changes preview instantly and apply globally after saving.
         </p>
       </div>
 
@@ -246,8 +398,11 @@ export default function DesignTab() {
             key={key}
             tokenKey={key}
             def={def}
-            ptValue={draft[key]}
-            onChange={(pt) => handleChange(key, pt)}
+            ptValue={draft.pt[key]}
+            colorValue={draft.colors[key]}
+            savedColor={savedColors[key] ?? def.defaultColor}
+            onPtChange={(pt)    => handlePtChange(key, pt)}
+            onColorChange={(c)  => handleColorChange(key, c)}
           />
         ))}
       </div>
@@ -273,7 +428,7 @@ export default function DesignTab() {
               : "rgba(255,255,255,0.3)",
         }}>
           {saved
-            ? "✓ Saved — live globally"
+            ? "✓ Saved — live globally after Publish"
             : hasChanges
               ? "Unsaved changes"
               : "No changes"}
@@ -291,7 +446,7 @@ export default function DesignTab() {
             cursor: "pointer", fontSize: "0.8rem",
           }}
         >
-          Reset to Defaults
+          Reset All to Defaults
         </button>
 
         <button

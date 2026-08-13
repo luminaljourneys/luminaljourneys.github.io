@@ -4,9 +4,10 @@
  * No redeploy needed — production site reads from *_production collections.
  *
  * Collections copied:
- *   content_edits_staging    → content_edits_production
- *   pages_staging            → pages_production
- *   site_config/form_staging → site_config/form_production
+ *   content_edits_staging            → content_edits_production
+ *   pages_staging                    → pages_production
+ *   site_config/form_staging         → site_config/form_production
+ *   site_config/design_tokens_staging → site_config/design_tokens_production
  *
  * Auth requirement:
  *   Firestore security rules require a Firebase Auth token (Google or email
@@ -23,6 +24,7 @@ import {
   CONTENT_COLL, CONTENT_PROD_COLL,
   PAGES_COLL,   PAGES_PROD_COLL,
   FORM_CONFIG_COLL, FORM_CONFIG_DOC, FORM_PROD_DOC,
+  SITE_CONFIG_COLL, DESIGN_TOKENS_DOC, DESIGN_TOKENS_PROD_DOC,
   PUBLISH_COLL,
   IS_STAGING,
 } from '../lib/collections'
@@ -72,7 +74,16 @@ export function usePublish() {
         })
       }
 
-      // ── 4. Log publish event ───────────────────────────────────────────────
+      // ── 4. Copy design_tokens_staging → design_tokens_production ──────────
+      const designSnap = await getDoc(doc(db, SITE_CONFIG_COLL, DESIGN_TOKENS_DOC))
+      if (designSnap.exists()) {
+        await setDoc(doc(db, SITE_CONFIG_COLL, DESIGN_TOKENS_PROD_DOC), {
+          ...designSnap.data(),
+          publishedAt: serverTimestamp(),
+        })
+      }
+
+      // ── 5. Log publish event ───────────────────────────────────────────────
       const ts = new Date().toISOString()
       await setDoc(doc(db, PUBLISH_COLL, ts), {
         publishedAt: serverTimestamp(),

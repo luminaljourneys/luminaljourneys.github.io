@@ -32,6 +32,12 @@ export const SITE_CONFIG_COLL      = 'site_config'
 export const SITE_META_DOC         = 'meta'
 export const AUTHORIZED_EDITORS_DOC = 'authorized_editors'
 
+// ── Design tokens (typography sizes + font colors) ────────────────────────────
+// Follows the same staging/production pattern as all other content.
+// Publish copies design_tokens_staging → design_tokens_production.
+export const DESIGN_TOKENS_DOC      = `design_tokens_${ENV}`
+export const DESIGN_TOKENS_PROD_DOC = 'design_tokens_production'
+
 // ── Collaborative notes ───────────────────────────────────────────────────────
 export const NOTES_COLL = 'page_notes'
 
