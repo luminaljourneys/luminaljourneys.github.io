@@ -11,8 +11,9 @@
  *   - Hex value
  *   - "Was" swatch — the last saved color — so she can revert with one click
  *
- * Changes are live-previewed in the admin immediately.
- * Publish Live copies all design settings to production.
+ * "Actual Reference" section renders a live HTML mockup of where each token
+ * appears on the site — updates in real time as sliders change.
+ * No static screenshots needed.
  */
 
 import { useState, useEffect } from 'react';
@@ -61,11 +62,9 @@ function WcagBadge({ pt, wcagMinPt }) {
 }
 
 // ── Color picker row ──────────────────────────────────────────────────────────
-// Shows: [swatch → opens native picker] [hex] [was: previous swatch (click to revert)]
 function ColorRow({ tokenKey, def, colorValue, savedColor, onChange }) {
-  const isChanged   = colorValue !== savedColor;
-  const isDefault   = colorValue === def.defaultColor;
-  const savedIsDefault = savedColor === def.defaultColor;
+  const isChanged = colorValue !== savedColor;
+  const isDefault = colorValue === def.defaultColor;
 
   return (
     <div style={{
@@ -176,6 +175,195 @@ function ColorRow({ tokenKey, def, colorValue, savedColor, onChange }) {
   );
 }
 
+// ── Live Reference Preview ─────────────────────────────────────────────────────
+// Renders a live HTML mockup of where each token appears on the site.
+// Uses CSS vars (var(--lj-size-*), var(--lj-color-*)) directly so it
+// updates automatically as sliders move — no static screenshots needed.
+function LivePreview({ tokenKey }) {
+  const wrap = {
+    borderRadius: "0.5rem",
+    border: `1px solid ${B.border}`,
+    overflow: "hidden",
+  };
+
+  switch (tokenKey) {
+
+    case "body":
+      return (
+        <div style={{ ...wrap, background: "#fff", padding: "1.25rem 1.5rem" }}>
+          <p style={{
+            fontFamily: "var(--font-body, Georgia, serif)",
+            fontSize: "var(--lj-size-body)",
+            color: "var(--lj-color-body)",
+            lineHeight: 1.75,
+            margin: 0,
+          }}>
+            The psychedelic industry is not regulated in the way most people assume.
+            Our practice holds itself to a clinical standard regardless.
+          </p>
+        </div>
+      );
+
+    case "heading":
+      return (
+        <div style={{ ...wrap, background: "#F9F8F6", padding: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "1.25rem" }}>
+            {/* Roman numeral — fixed style, not controlled by this token */}
+            <div style={{
+              fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
+              fontSize: "1.5rem",
+              color: "#89a99e",
+              fontStyle: "italic",
+              flexShrink: 0,
+              paddingTop: "0.1rem",
+            }}>
+              I
+            </div>
+            <h3 style={{
+              fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
+              fontSize: "var(--lj-size-heading)",
+              color: "var(--lj-color-heading)",
+              fontWeight: 400,
+              margin: 0,
+              lineHeight: 1.25,
+            }}>
+              Competence without compromise
+            </h3>
+          </div>
+          <div style={{
+            fontSize: "0.7rem",
+            color: B.sage,
+            fontFamily: "var(--font-mono, monospace)",
+            marginTop: "0.75rem",
+          }}>
+            ↑ Slider controls the bold title. The italic "I" uses a separate fixed style.
+          </div>
+        </div>
+      );
+
+    case "nav":
+      return (
+        <div style={{ ...wrap, background: "#fff", padding: "0.85rem 1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
+            {["Our Practice", "The Process", "About Us"].map(link => (
+              <span key={link} style={{
+                fontFamily: "var(--font-body, system-ui, sans-serif)",
+                fontSize: "var(--lj-size-nav)",
+                color: "var(--lj-color-nav)",
+                fontWeight: 500,
+                letterSpacing: "0.01em",
+              }}>
+                {link}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+
+    case "form":
+      return (
+        <div style={{ ...wrap, background: "#F9F8F6", padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <div style={{
+              fontFamily: "var(--font-body, system-ui, sans-serif)",
+              fontSize: "var(--lj-size-form)",
+              color: "var(--lj-color-form)",
+              fontWeight: 500,
+              marginBottom: "0.35rem",
+            }}>
+              First Name
+            </div>
+            <div style={{
+              fontFamily: "var(--font-body, system-ui, sans-serif)",
+              fontSize: "var(--lj-size-form)",
+              color: "var(--lj-color-form)",
+              padding: "0.5rem 0.8rem",
+              border: `1px solid ${B.border}`,
+              borderRadius: "0.375rem",
+              background: "#fff",
+            }}>
+              Wang Si
+            </div>
+          </div>
+          <div>
+            <div style={{
+              fontFamily: "var(--font-body, system-ui, sans-serif)",
+              fontSize: "var(--lj-size-form)",
+              color: "var(--lj-color-form)",
+              fontWeight: 500,
+              marginBottom: "0.35rem",
+            }}>
+              How did you hear about us?
+            </div>
+            <div style={{
+              fontFamily: "var(--font-body, system-ui, sans-serif)",
+              fontSize: "var(--lj-size-form)",
+              color: B.sage,
+              padding: "0.5rem 0.8rem",
+              border: `1px solid ${B.border}`,
+              borderRadius: "0.375rem",
+              background: "#fff",
+            }}>
+              Select an option…
+            </div>
+          </div>
+        </div>
+      );
+
+    case "micro":
+      return (
+        <div style={{ ...wrap, background: "#F9F8F6", padding: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "2.5rem", flexWrap: "wrap" }}>
+            <div>
+              <div style={{
+                fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
+                fontSize: "2.8rem",
+                color: "#172f2d",
+                fontWeight: 400,
+                lineHeight: 1,
+              }}>69</div>
+              <div style={{
+                fontFamily: "var(--font-body, system-ui, sans-serif)",
+                fontSize: "var(--lj-size-micro)",
+                color: "var(--lj-color-micro)",
+                letterSpacing: "0.1em",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                marginTop: "0.4rem",
+                lineHeight: 1.4,
+              }}>
+                COMBINED EXPERIENCE<br />IN WELLNESS & HEALTHCARE
+              </div>
+            </div>
+            <div>
+              <div style={{
+                fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
+                fontSize: "2.8rem",
+                color: "#172f2d",
+                fontWeight: 400,
+                lineHeight: 1,
+              }}>3</div>
+              <div style={{
+                fontFamily: "var(--font-body, system-ui, sans-serif)",
+                fontSize: "var(--lj-size-micro)",
+                color: "var(--lj-color-micro)",
+                letterSpacing: "0.1em",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                marginTop: "0.4rem",
+              }}>
+                PRACTITIONERS
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
+
 // ── Single token card ─────────────────────────────────────────────────────────
 function TokenCard({ tokenKey, def, ptValue, colorValue, savedColor, onPtChange, onColorChange }) {
   const pt          = ptValue ?? def.defaultPt;
@@ -284,7 +472,7 @@ function TokenCard({ tokenKey, def, ptValue, colorValue, savedColor, onPtChange,
         onChange={onColorChange}
       />
 
-      {/* Live preview — uses current draft size + color */}
+      {/* Inline preview — uses direct draft values */}
       <div style={{
         padding: "0.85rem 1rem",
         background: B.paper,
@@ -301,6 +489,34 @@ function TokenCard({ tokenKey, def, ptValue, colorValue, savedColor, onPtChange,
           The quiet power of inner clarity.
         </div>
       </div>
+
+      {/* Actual Reference — live HTML that updates as sliders move */}
+      <div style={{
+        borderTop: `1px solid ${B.border}`,
+        paddingTop: "1rem",
+      }}>
+        <div style={{
+          fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase",
+          color: B.sage, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.7rem",
+        }}>
+          Actual Reference — live
+        </div>
+
+        <LivePreview tokenKey={tokenKey} />
+
+        {def.referenceCaption && (
+          <div style={{
+            fontSize: "0.83rem",
+            fontWeight: 500,
+            color: B.teal,
+            marginTop: "0.55rem",
+            lineHeight: 1.5,
+          }}>
+            {def.referenceCaption}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
