@@ -219,8 +219,8 @@ export default function LandingPage() {
               whiteSpace: "pre-line",
             }}
           />
-          {/* RIGHT COLUMN — Luminal Journeys answer + CTA */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2rem", paddingTop: mobile ? 0 : "0.25rem" }}>
+          {/* RIGHT COLUMN — Luminal Journeys answer */}
+          <div style={{ paddingTop: mobile ? 0 : "0.25rem" }}>
             <EditableContent
               contentKey="hero.right.body"
               fallback={`At Luminal Journeys, you don't have to choose between deep expansion vs. Safety and competence. We are a collective of licensed wellness, healthcare, and mental health professionals—all with proven leadership experience and formal certifications in psychedelic facilitation.\n\nBy bridging indigenous wisdom with healthcare frameworks, our protocols balance the ancient mysticism of plant medicines with psychological rigor and practical application in modern life. Our standard of competence ensures your journey is not only deeply transformative, but held with absolute psychological, somatic, and ethical safety.`}
@@ -232,14 +232,6 @@ export default function LandingPage() {
                 whiteSpace: "pre-line",
               }}
             />
-            <button data-testid="hero-cta" onClick={() => navigate("/intake")} style={{
-              background: B.deep, color: B.paper, border: "none",
-              padding: "1rem 2.5rem", borderRadius: "3rem", cursor: "pointer",
-              fontSize: "0.95rem", fontFamily: "var(--font-body)", fontWeight: 500,
-              alignSelf: mobile ? "flex-start" : "flex-end",
-            }}>
-              <EditableContent contentKey="hero.cta.label" fallback="Get Started →" tag="span" />
-            </button>
           </div>
         </div>
       </div>
