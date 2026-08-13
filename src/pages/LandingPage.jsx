@@ -266,6 +266,11 @@ export default function LandingPage() {
 
       {/* PRINCIPLES */}
       <div id="principles">
+        {/* Section label — mirrors THE PROCESS divider pattern */}
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", padding: mobile ? "3rem 1.5rem 0" : "6rem 4rem 0" }}>
+          <EditableContent contentKey="principles.section.label" fallback="Our Practice" tag="span" style={{ fontSize: "var(--lj-size-micro, 0.68rem)", letterSpacing: "0.2em", textTransform: "uppercase", color: B.muted, fontFamily: "var(--font-mono)" }} />
+          <div style={{ flex: 1, height: 1, background: B.rule }} />
+        </div>
         {PRINCIPLES.map((p) => (
           <div key={p.key} style={{
             display: "grid",
