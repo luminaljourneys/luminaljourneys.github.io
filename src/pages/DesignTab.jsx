@@ -301,6 +301,63 @@ function TokenCard({ tokenKey, def, ptValue, colorValue, savedColor, onPtChange,
           The quiet power of inner clarity.
         </div>
       </div>
+
+      {/* Actual Reference — screenshot showing exactly where this text appears on the site */}
+      <div style={{
+        borderTop: `1px solid ${B.border}`,
+        paddingTop: "1rem",
+      }}>
+        <div style={{
+          fontSize: "0.62rem", letterSpacing: "0.14em", textTransform: "uppercase",
+          color: B.sage, fontFamily: "var(--font-mono, monospace)", marginBottom: "0.6rem",
+        }}>
+          Actual Reference
+        </div>
+
+        {def.referenceImage ? (
+          <>
+            <div style={{
+              borderRadius: "0.5rem",
+              overflow: "hidden",
+              border: `1px solid ${B.border}`,
+              background: "#F9F8F6",
+            }}>
+              <img
+                src={def.referenceImage}
+                alt={`Reference: where ${def.label} appears on the site`}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  display: "block",
+                }}
+              />
+            </div>
+            <div style={{
+              fontSize: "0.7rem",
+              color: B.sage,
+              fontFamily: "var(--font-mono, monospace)",
+              marginTop: "0.4rem",
+              lineHeight: 1.5,
+            }}>
+              {def.referenceCaption}
+            </div>
+          </>
+        ) : (
+          <div style={{
+            padding: "0.75rem 1rem",
+            borderRadius: "0.5rem",
+            border: `1px dashed ${B.border}`,
+            fontSize: "0.75rem",
+            color: B.sage,
+            fontFamily: "var(--font-mono, monospace)",
+            lineHeight: 1.6,
+          }}>
+            📷 {def.referenceCaption}
+            <br />
+            <span style={{ opacity: 0.7 }}>Screenshot coming soon — drop <code>ref-form.png</code> into <code>public/design-reference/</code></span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
