@@ -188,21 +188,54 @@ function LivePreview({ tokenKey }) {
 
   switch (tokenKey) {
 
-    case "body":
+    // ── Hero section ───────────────────────────────────────────────────────────
+
+    case "display":
       return (
-        <div style={{ ...wrap, background: "#fff", padding: "1.25rem 1.5rem" }}>
-          <p style={{
-            fontFamily: "var(--font-body, Georgia, serif)",
-            fontSize: "var(--lj-size-body)",
-            color: "var(--lj-color-body)",
-            lineHeight: 1.75,
+        <div style={{ ...wrap, background: "#F9F8F6", padding: "2rem 1.75rem", overflow: "hidden" }}>
+          {/* Amber tagline line (decorative — fixed in this preview) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            <div style={{ height: 1, width: 28, background: "#bf8a3e" }} />
+            <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "#bf8a3e" }}>
+              Guided Psychedelic Sessions
+            </span>
+          </div>
+          {/* Display heading — uses display token CSS var inside a clamp so it stays responsive */}
+          <h1 style={{
+            fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
+            fontSize: "clamp(2rem, 8vw, var(--lj-size-display, 7rem))",
+            fontWeight: 400,
+            lineHeight: 0.95,
+            color: "var(--lj-color-display)",
+            letterSpacing: "-0.03em",
             margin: 0,
           }}>
-            The psychedelic industry is not regulated in the way most people assume.
-            Our practice holds itself to a clinical standard regardless.
-          </p>
+            Illuminate
+            <br />
+            <em style={{ fontStyle: "italic" }}>your full human potential</em>
+          </h1>
         </div>
       );
+
+    case "tagline":
+      return (
+        <div style={{ ...wrap, background: "#F9F8F6", padding: "1.5rem 1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ height: 1, width: 36, background: "var(--lj-color-tagline)" }} />
+            <span style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "var(--lj-size-tagline)",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "var(--lj-color-tagline)",
+            }}>
+              GUIDED PSYCHEDELIC SESSIONS FOR INDIVIDUALS, INTIMATE PARTNERS, AND WORK TEAMS
+            </span>
+          </div>
+        </div>
+      );
+
+    // ── Section content ────────────────────────────────────────────────────────
 
     case "heading":
       return (
@@ -241,17 +274,67 @@ function LivePreview({ tokenKey }) {
         </div>
       );
 
+    case "body":
+      return (
+        <div style={{ ...wrap, background: "#fff", padding: "1.5rem 1.75rem" }}>
+          <p style={{
+            fontFamily: "var(--font-body, Georgia, serif)",
+            fontSize: "var(--lj-size-body)",
+            color: "var(--lj-color-body)",
+            lineHeight: 1.9,
+            margin: "0 0 1.1em",
+            whiteSpace: "pre-line",
+          }}>
+            Human potential is rarely blocked by a lack of intelligence or drive; it is blocked by unconscious patterns and fears stored deep within our nervous system.
+          </p>
+          <p style={{
+            fontFamily: "var(--font-body, Georgia, serif)",
+            fontSize: "var(--lj-size-body)",
+            color: "var(--lj-color-body)",
+            lineHeight: 1.9,
+            margin: 0,
+          }}>
+            To step into the depths of your mind, you need a guide who knows how to hold the floor.
+          </p>
+        </div>
+      );
+
+    // ── Navigation & UI ────────────────────────────────────────────────────────
+
     case "nav":
       return (
-        <div style={{ ...wrap, background: "#fff", padding: "0.85rem 1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
+        <div style={{ ...wrap, background: "#fff", display: "flex", flexDirection: "column" }}>
+          {/* Top nav */}
+          <div style={{
+            padding: "0.85rem 1.5rem",
+            display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap",
+            borderBottom: `1px solid ${B.border}`,
+          }}>
+            <span style={{ fontSize: "0.65rem", color: B.sage, fontFamily: "var(--font-mono, monospace)", minWidth: "3.5rem" }}>Top nav</span>
             {["Our Practice", "The Process", "About Us"].map(link => (
               <span key={link} style={{
-                fontFamily: "var(--font-body, system-ui, sans-serif)",
+                fontFamily: "var(--font-mono, monospace)",
                 fontSize: "var(--lj-size-nav)",
                 color: "var(--lj-color-nav)",
                 fontWeight: 500,
-                letterSpacing: "0.01em",
+                letterSpacing: "0.02em",
+              }}>
+                {link}
+              </span>
+            ))}
+          </div>
+          {/* Footer nav */}
+          <div style={{
+            padding: "0.85rem 1.5rem",
+            display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap",
+          }}>
+            <span style={{ fontSize: "0.65rem", color: B.sage, fontFamily: "var(--font-mono, monospace)", minWidth: "3.5rem" }}>Footer</span>
+            {["Our Practice", "The Process", "About Us"].map(link => (
+              <span key={link} style={{
+                fontFamily: "var(--font-mono, monospace)",
+                fontSize: "var(--lj-size-nav)",
+                color: "var(--lj-color-nav)",
+                letterSpacing: "0.06em",
               }}>
                 {link}
               </span>
@@ -312,8 +395,9 @@ function LivePreview({ tokenKey }) {
 
     case "micro":
       return (
-        <div style={{ ...wrap, background: "#F9F8F6", padding: "1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "2.5rem", flexWrap: "wrap" }}>
+        <div style={{ ...wrap, background: "#F9F8F6", display: "flex", flexDirection: "column" }}>
+          {/* Stats block */}
+          <div style={{ padding: "1.5rem", display: "flex", alignItems: "flex-end", gap: "2.5rem", flexWrap: "wrap", borderBottom: `1px solid ${B.border}` }}>
             <div>
               <div style={{
                 fontFamily: "var(--font-heading, 'DM Serif Display', Georgia, serif)",
@@ -321,7 +405,7 @@ function LivePreview({ tokenKey }) {
                 color: "#172f2d",
                 fontWeight: 400,
                 lineHeight: 1,
-              }}>69</div>
+              }}>94%</div>
               <div style={{
                 fontFamily: "var(--font-body, system-ui, sans-serif)",
                 fontSize: "var(--lj-size-micro)",
@@ -330,9 +414,8 @@ function LivePreview({ tokenKey }) {
                 fontWeight: 600,
                 textTransform: "uppercase",
                 marginTop: "0.4rem",
-                lineHeight: 1.4,
               }}>
-                COMBINED EXPERIENCE<br />IN WELLNESS & HEALTHCARE
+                Client Retention
               </div>
             </div>
             <div>
@@ -342,7 +425,7 @@ function LivePreview({ tokenKey }) {
                 color: "#172f2d",
                 fontWeight: 400,
                 lineHeight: 1,
-              }}>3</div>
+              }}>12+</div>
               <div style={{
                 fontFamily: "var(--font-body, system-ui, sans-serif)",
                 fontSize: "var(--lj-size-micro)",
@@ -352,8 +435,30 @@ function LivePreview({ tokenKey }) {
                 textTransform: "uppercase",
                 marginTop: "0.4rem",
               }}>
-                PRACTITIONERS
+                Years of Practice
               </div>
+            </div>
+          </div>
+          {/* Section divider label + CTA sub-label */}
+          <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <span style={{
+                fontFamily: "var(--font-mono, monospace)",
+                fontSize: "var(--lj-size-micro)",
+                color: "var(--lj-color-micro)",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+              }}>Our Practice</span>
+              <div style={{ flex: 1, height: 1, background: B.border }} />
+            </div>
+            <div style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "var(--lj-size-micro)",
+              color: "#172f2d",
+              opacity: 0.45,
+              letterSpacing: "0.03em",
+            }}>
+              Forms for Participation
             </div>
           </div>
         </div>

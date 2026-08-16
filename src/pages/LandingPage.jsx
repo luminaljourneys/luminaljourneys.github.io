@@ -3,6 +3,7 @@ import MockupBanner from "../components/MockupBanner.jsx";
 import EditableContent from "../components/EditableContent.jsx";
 import { navigate } from "../App.jsx";
 import { useSitePages } from "../hooks/useSitePages.js";
+import { IS_STAGING } from "../lib/collections.js";
 
 const B = {
   deep:   "#172f2d",
@@ -126,10 +127,10 @@ export default function LandingPage() {
         </div>
         {!mobile && (
           <div style={{ display: "flex", alignItems: "center", gap: "3rem" }}>
-            <a href="#principles" style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
+            <a href="#principles" style={{ color: "var(--lj-color-nav, rgba(23,47,45,0.45))", fontSize: "var(--lj-size-nav, 0.82rem)", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
               <EditableContent contentKey="nav.link.principles" fallback="Our Practice" tag="span" />
             </a>
-            <a href="#process"    style={{ color: B.muted, fontSize: "0.82rem", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
+            <a href="#process"    style={{ color: "var(--lj-color-nav, rgba(23,47,45,0.45))", fontSize: "var(--lj-size-nav, 0.82rem)", textDecoration: "none", letterSpacing: "0.02em", fontFamily: "var(--font-mono)" }}>
               <EditableContent contentKey="nav.link.process" fallback="Process" tag="span" />
             </a>
             {/* Dynamic pages — added by client via Admin → Pages */}
@@ -152,7 +153,7 @@ export default function LandingPage() {
                 contentKey="hero.cta.sub"
                 fallback="Forms for Participation"
                 tag="span"
-                style={{ fontSize: "0.62rem", color: B.muted, fontFamily: "var(--font-mono)", letterSpacing: "0.03em", marginTop: "5px" }}
+                style={{ fontSize: "var(--lj-size-micro, 0.62rem)", color: B.muted, fontFamily: "var(--font-mono)", letterSpacing: "0.03em", marginTop: "5px" }}
               />
             </div>
           </div>
@@ -176,20 +177,20 @@ export default function LandingPage() {
         borderBottom: `1px solid ${B.rule}`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: mobile ? "2rem" : "3rem" }}>
-          <div style={{ height: 1, width: 48, background: B.amber }} />
+          <div style={{ height: 1, width: 48, background: "var(--lj-color-tagline, #bf8a3e)" }} />
           <EditableContent
             contentKey="hero.tagline"
             fallback="Integrative Health · Private Practice"
             tag="span"
-            style={{ fontSize: "0.68rem", letterSpacing: "0.2em", textTransform: "uppercase", color: B.amber, fontFamily: "var(--font-mono)" }}
+            style={{ fontSize: "var(--lj-size-tagline, 0.68rem)", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--lj-color-tagline, #bf8a3e)", fontFamily: "var(--font-mono)" }}
           />
         </div>
 
         <h1 style={{
           fontFamily: "var(--font-heading)",
-          fontSize: mobile ? "clamp(3rem, 11vw, 8.5rem)" : "clamp(4rem, 11vw, 8rem)",
+          fontSize: mobile ? "clamp(3rem, 11vw, var(--lj-size-display, 8.5rem))" : "clamp(4rem, 11vw, var(--lj-size-display, 8rem))",
           fontWeight: 400, lineHeight: 0.95,
-          color: B.deep, letterSpacing: "-0.03em",
+          color: "var(--lj-color-display, #172f2d)", letterSpacing: "-0.03em",
           marginBottom: mobile ? "2.5rem" : "4rem", maxWidth: "100%"
         }}>
           <EditableContent contentKey="hero.headline.pre" fallback="Care that begins" tag="span" />
@@ -318,7 +319,7 @@ export default function LandingPage() {
               borderLeft:  !mobile && i === 0 ? `1px solid ${B.rule}` : "none",
               borderBottom: mobile && i < 3 ? `1px solid ${B.rule}` : "none",
             }}>
-              <div style={{ fontSize: "var(--lj-size-micro, 0.65rem)", letterSpacing: "0.2em", color: B.amber, marginBottom: "1rem", fontFamily: "var(--font-mono)" }}>{s.step}</div>
+              <div style={{ fontSize: "var(--lj-size-micro, 0.65rem)", letterSpacing: "0.2em", color: "var(--lj-color-tagline, #bf8a3e)", marginBottom: "1rem", fontFamily: "var(--font-mono)" }}>{s.step}</div>
               <EditableContent
                 contentKey={`${s.key}.title`}
                 fallback={s.title}
@@ -382,18 +383,30 @@ export default function LandingPage() {
           <Wordmark color={B.deep} size="0.75rem" />
         </div>
 
-        {/* Dynamic page links in footer */}
-        {navPages.length > 0 && (
-          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-            {navPages.map(page => (
-              <button key={page.id} onClick={() => navigate("/" + page.id)} style={{
-                background: "none", border: "none", cursor: "pointer",
-                fontSize: "0.72rem", color: B.muted, fontFamily: "var(--font-mono)",
-                letterSpacing: "0.06em", padding: 0,
-              }}>{page.title}</button>
-            ))}
-          </div>
-        )}
+        {/* Footer nav links — static anchors + dynamic pages */}
+        <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          <a href="#principles" style={{
+            fontSize: "var(--lj-size-nav, 0.72rem)", color: B.muted,
+            fontFamily: "var(--font-mono)", letterSpacing: "0.06em",
+            textDecoration: "none",
+          }}>
+            <EditableContent contentKey="nav.link.principles" fallback="Our Practice" tag="span" />
+          </a>
+          <a href="#process" style={{
+            fontSize: "var(--lj-size-nav, 0.72rem)", color: B.muted,
+            fontFamily: "var(--font-mono)", letterSpacing: "0.06em",
+            textDecoration: "none",
+          }}>
+            <EditableContent contentKey="nav.link.process" fallback="The Process" tag="span" />
+          </a>
+          {navPages.map(page => (
+            <button key={page.id} onClick={() => navigate("/" + page.id)} style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: "var(--lj-size-nav, 0.72rem)", color: B.muted,
+              fontFamily: "var(--font-mono)", letterSpacing: "0.06em", padding: 0,
+            }}>{page.title}</button>
+          ))}
+        </div>
 
         <EditableContent
           contentKey="footer.copyright"
@@ -401,7 +414,11 @@ export default function LandingPage() {
           tag="span"
           style={{ fontSize: "0.72rem", color: B.muted, fontFamily: "var(--font-mono)" }}
         />
-        <button data-testid="admin-link" onClick={() => navigate("/admin")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: B.muted, opacity: 0.4, letterSpacing: "0.1em", fontFamily: "var(--font-mono)" }}>Admin</button>
+
+        {/* Admin link — staging only. Hidden in production to prevent enumeration. */}
+        {IS_STAGING && (
+          <button data-testid="admin-link" onClick={() => navigate("/admin")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: B.muted, opacity: 0.4, letterSpacing: "0.1em", fontFamily: "var(--font-mono)" }}>Admin</button>
+        )}
       </footer>
 
       <MockupBanner />
